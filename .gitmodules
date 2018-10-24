@@ -1,3 +1,4 @@
 [submodule "chord_test/chord"]
 	path = chord_test/chord
 	url = https://github.com/crest42/chord
+	branch = storage
