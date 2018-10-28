@@ -2,3 +2,6 @@
 	path = chord_test/chord
 	url = https://github.com/crest42/chord
 	branch = storage
+[submodule "chord_test/CHash"]
+	path = chord_test/CHash
+	url = https://github.com/crest42/CHash

@@ -27,297 +27,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
-#include "thread.h"
-#include "hashes.h"
-#include "hashes/sha1.h"
-#include "/home/robin/git/chord/include/chord.h"
-#define SERVER_MSG_QUEUE_SIZE   (8)
-#define SERVER_BUFFER_SIZE      (64)
-#include <stdio.h>
+#include "chord_storage.h"
 #include <stdarg.h>
+#include "mtd.h"
+#include "fs/littlefs_fs.h"
+#define HELLO_WORLD_CONTENT "Hello World!\n"
+#define HELLO_RIOT_CONTENT  "Hello RIOT!\n"
+#define FLASH_MOUNT_POINT   "/sda"
+#define FS_DRIVER littlefs_file_system
 
-#define DEBUG_MAX_FUNC_NAME 20
-#ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL INFO
-#endif
+static littlefs_desc_t fs_desc = {
+    .lock = MUTEX_INIT,
+};
+static vfs_mount_t flash_mount = {
+    .fs = &FS_DRIVER,
+    .mount_point = FLASH_MOUNT_POINT,
+    .private_data = &fs_desc,
+};
+
 FILE* default_out;
-
-//static char server_buffer_p[SERVER_BUFFER_SIZE];
-static char server_stack_p[THREAD_STACKSIZE_DEFAULT];
-//static msg_t server_msg_queue_p[SERVER_MSG_QUEUE_SIZE];
-
-//static char server_buffer_w[SERVER_BUFFER_SIZE];
-static char server_stack_w[THREAD_STACKSIZE_DEFAULT];
-//static msg_t server_msg_queue_w[SERVER_MSG_QUEUE_SIZE];
-
-int
-hash(unsigned char* out,
-     const unsigned char* in,
-     size_t in_size,
-     size_t out_size)
-{
-  (void)(out_size);
-  sha1(out, in, in_size);
-  return 0;
-}
-
-static const char*
-log_level_to_string(enum log_level level)
-{
-  switch (level) {
-    case OFF:
-      return "OFF";
-    case FATAL:
-      return "FATAL";
-    case ERROR:
-      return "ERROR";
-    case WARN:
-      return "WARN";
-    case INFO:
-      return "INFO";
-    case DEBUG:
-      return "DEBUG";
-    case ALL:
-      return "ALL";
-    default:
-      return NULL;
-  }
-}
-
- char*
-msg_to_string(chord_msg_t msg)
-{
-  switch (msg) {
-    case MSG_TYPE_NULL:
-      return "MSG_TYPE_NULL";
-    case MSG_TYPE_GET_PREDECESSOR:
-      return "MSG_TYPE_GET_PREDECESSOR";
-    case MSG_TYPE_GET_PREDECESSOR_RESP:
-      return "MSG_TYPE_GET_PREDECESSOR_RESP";
-    case MSG_TYPE_GET_PREDECESSOR_RESP_NULL:
-      return "MSG_TYPE_GET_PREDECESSOR_RESP_NULL";
-    case MSG_TYPE_FIND_SUCCESSOR:
-      return "MSG_TYPE_FIND_SUCCESSOR";
-    case MSG_TYPE_FIND_SUCCESSOR_RESP:
-      return "MSG_TYPE_FIND_SUCCESSOR_RESP";
-    case MSG_TYPE_FIND_SUCCESSOR_RESP_NEXT:
-      return "MSG_TYPE_FIND_SUCCESSOR_RESP_NEXT";
-    case MSG_TYPE_GET_SUCCESSOR:
-      return "MSG_TYPE_GET_SUCCESSOR";
-    case MSG_TYPE_GET_SUCCESSOR_RESP:
-      return "MSG_TYPE_GET_SUCCESSOR_RESP";
-    case MSG_TYPE_PING:
-      return "MSG_TYPE_PING";
-    case MSG_TYPE_PONG:
-      return "MSG_TYPE_PONG";
-    case MSG_TYPE_NO_WAIT:
-      return "MSG_TYPE_NO_WAIT";
-    case MSG_TYPE_NOTIFY:
-      return "MSG_TYPE_NOTIFY";
-    case MSG_TYPE_COPY_SUCCESSORLIST:
-      return "MSG_TYPE_COPY_SUCCESSORLIST";
-    case MSG_TYPE_COPY_SUCCESSORLIST_RESP:
-      return "MSG_TYPE_COPY_SUCCESSORLIST_RESP";
-    case MSG_TYPE_GET:
-      return "MSG_TYPE_GET";
-    case MSG_TYPE_GET_RESP:
-      return "MSG_TYPE_GET_RESP";
-    case MSG_TYPE_PUT:
-      return "MSG_TYPE_PUT";
-    case MSG_TYPE_PUT_ACK:
-      return "MSG_TYPE_PUT_ACK";
-    case MSG_TYPE_EXIT:
-      return "MSG_TYPE_EXIT";
-    case MSG_TYPE_EXIT_ACK:
-      return "MSG_TYPE_EXIT_ACK";
-    case MSG_TYPE_FIND_SUCCESSOR_LINEAR:
-      return "MSG_TYPE_FIND_SUCCESSOR_LINEAR";
-    case MSG_TYPE_REFRESH_CHILD:
-      return "MSG_TYPE_REFRESH_CHILD";
-    case MSG_TYPE_REGISTER_CHILD:
-      return "MSG_TYPE_REGISTER_CHILD";
-    case MSG_TYPE_REGISTER_CHILD_EFULL:
-      return "MSG_TYPE_REGISTER_CHILD_EFULL";
-    case MSG_TYPE_REGISTER_CHILD_EWRONG:
-      return "MSG_TYPE_REGISTER_CHILD_EWRONG";
-    case MSG_TYPE_REGISTER_CHILD_OK:
-      return "MSG_TYPE_REGISTER_CHILD_OK";
-    case MSG_TYPE_REGISTER_CHILD_REDIRECT:
-      return "MSG_TYPE_REGISTER_CHILD_REDIRECT";
-    case MSG_TYPE_REFRESH_CHILD_OK:
-      return "MSG_TYPE_REFRESH_CHILD_OK";
-    case MSG_TYPE_REFRESH_CHILD_REDIRECT:
-      return "MSG_TYPE_REFRESH_CHILD_REDIRECT";
-    default:
-      return "UNKNOWN";
-  }
-}
-
-void
-debug_printf(unsigned long t,
-             const char* fname,
-             enum log_level level,
-             const char* format,
-             ...)
-{
-  struct node *mynode = get_own_node();
-  FILE* out = stdout;
-  if (level <= ERROR) {
-    //out = stderr;
-  }
-
-  if ((level & DEBUG_LEVEL) != level) {
-    return;
-  }
-  char max_func_name[DEBUG_MAX_FUNC_NAME];
-  memset(max_func_name, 0, DEBUG_MAX_FUNC_NAME);
-  strncpy(max_func_name, fname, DEBUG_MAX_FUNC_NAME - 1);
-  for (int i = strlen(max_func_name); i < DEBUG_MAX_FUNC_NAME - 1; i++) {
-    max_func_name[i] = ' ';
-  }
-  nodeid_t suc = 0, pre = 0;
-  if(mynode->predecessor) {
-    pre = mynode->predecessor->id;
-  }
-  if(mynode->successor) {
-    suc = mynode->successor->id;
-  }
-
-  fprintf(out,
-          "%lu: [%d<-%d->%d] [%s] %s: ",
-          t,
-          pre,
-          mynode->id,
-          suc,
-          log_level_to_string(level),
-          max_func_name);
-
-  va_list args;
-  va_start(args, format);
-  vfprintf(out, format, args);
-  va_end(args);
-  return;
-}
-
-static void
-debug_print_fingertable(void)
-{
-struct fingertable_entry *fingertable = get_fingertable();  
-  struct node *mynode = get_own_node();
-  printf("fingertable of %d:\n", mynode->id);
-  for (int i = 0; i < FINGERTABLE_SIZE; i++) {
-    if (!node_is_null(&fingertable[i].node)) {
-      printf("%d-%d: node(%d)\n",
-             fingertable[i].start,
-             (fingertable[i].start + fingertable[i].interval) % CHORD_RING_SIZE,
-             fingertable[i].node.id);
-    } else {
-      printf("%d-%d: node(nil)\n",
-             fingertable[i].start,
-             (fingertable[i].start + fingertable[i].interval) %
-               CHORD_RING_SIZE);
-    }
-  }
-}
-
-static void
-debug_print_successorlist(void)
-{
-    struct node *successorlist = get_successorlist();
-
-struct node *mynode = get_own_node();
-  printf("successorlist of %d:\n", mynode->id);
-
-  int myid = -1;
-  if (!node_is_null(mynode->successor)) {
-    myid = mynode->successor->id;
-  }
-  for (int i = 0; i < SUCCESSORLIST_SIZE; i++) {
-    if (!node_is_null(&successorlist[i])) {
-      printf("successor %d (>%d) is: %d\n", i, myid, successorlist[i].id);
-    } else {
-      printf("successor %d (>%d) is: null\n", i, myid);
-    }
-    myid = successorlist[i].id;
-  }
-}
-
-static void
-debug_print_keys(void)
-{
-  struct node *mynode = get_own_node();
-  struct key** first_key = get_first_key();
-  if (*first_key == NULL) {
-    printf("no keys yet\n");
-    return;
-  }
-  int i = 0;
-  printf("keylist of %d:\n", mynode->id);
-
-  for (struct key* start = *first_key; start != NULL; start = start->next) {
-    printf("Key %d: size: %u id: %d owner: %d next: %p\n",
-           i,
-           start->size,
-           start->id,
-           start->owner,
-           (void *)start->next);
-    i++;
-  }
-  return;
-}
-
-void
-debug_print_node(struct node* node, bool verbose)
-{
-  if (!node_is_null(node->predecessor)) {
-    printf("%d", node->predecessor->id);
-  } else {
-    printf("NULL");
-  }
-  printf("<-%d->", node->id);
-  if (node->successor) {
-    printf("%d", node->successor->id);
-  } else {
-    printf("NULL");
-  }
-  printf("\nchilds:\n");
-  struct childs *c = get_childs();
-  for(int i = 0;i<CHORD_TREE_CHILDS;i++) {
-    printf("child %d is %d and age %d\n",i,c->child[i].child,(int)(time(NULL)-c->child[i].t));
-  }
-  struct aggregate *stats = get_stats();
-  printf("aggregation information: %d nodes, size: %d/%d\n",stats->nodes,stats->used,stats->available);
-  if (verbose)
-  {
-    debug_print_fingertable();
-    debug_print_successorlist();
-    debug_print_keys();
-  }
-}
-
-static int chord_start(struct node *mynode, struct node *partner)
-{
-    /* start server (which means registering pktdump for the chosen port) */
-    if (thread_create(server_stack_w, sizeof(server_stack_w), THREAD_PRIORITY_MAIN - 1,
-                      THREAD_CREATE_STACKTEST,
-                      thread_wait_for_msg, mynode, "CHORD msg") <= KERNEL_PID_UNDEF) {
-        puts("error initializing thread");
-        return 1;
-    }
-    if (thread_create(server_stack_p, sizeof(server_stack_p), THREAD_PRIORITY_MAIN - 1,
-                      THREAD_CREATE_STACKTEST,
-                      thread_periodic, partner, "CHORD Periodic") <= KERNEL_PID_UNDEF) {
-        puts("error initializing thread");
-        return 1;
-    }
-    return 0;
-}
+mtd_dev_t dev;
 
 int chord_cmd(int argc, char **argv)
 {
@@ -325,8 +59,6 @@ int chord_cmd(int argc, char **argv)
         printf("usage: %s [master|slave]\n", argv[0]);
         return 1;
     }
-    struct node partner;
-    memset(&partner,0,sizeof(partner));
 
     if (strcmp(argv[1], "master") == 0) {
         printf("start master node\n");
@@ -335,39 +67,271 @@ int chord_cmd(int argc, char **argv)
                    argv[0]);
             return 1;
         }
-        if (init_chord(argv[2]) == CHORD_ERR) {
+        if (init_chord_wrapper(argv[2]) == CHORD_ERR) {
             printf("error init chord\n");
             return -1;
         }
-        add_node(NULL);
+        add_node_wrapper(NULL);
     }
     else if (strcmp(argv[1], "slave") == 0) {
+        printf("create slave node\n");
         if (argc < 4) {
             printf("usage: %s slave <slaveip> <masterip>\n", argv[0]);
             return 1;
         }
-        if (init_chord(argv[3]) == CHORD_ERR) {
+        if (init_chord_wrapper(argv[2]) == CHORD_ERR) {
              printf("error init chord\n");
             return -1;
         }
-        printf("create slave node\n");
-        create_node(argv[3], &partner);
-        printf("add partner node\n");
-        add_node(&partner);
+        add_node_wrapper(argv[3]);
 
     }
     else {
         puts("error: invalid command");
         return 1;
     }
-    struct node *mynode = get_own_node();
-    printf("start chord\n");
-    chord_start(mynode,&partner);
-    printf("chord started\n");
-    while(true) {
-        debug_print_node(mynode,false);
-        sleep(1);
+    dev.driver = &chord_mtd_driver;
+    dev.page_size = 128;
+    dev.pages_per_sector = 1;
+    dev.sector_count = 100;
+    if(dev.driver->init(&dev) != 0) {
+      printf("Error in mtd init!\n");
+      assert(true);
     }
+    printf("chord started\n");
+    return 0;
+}
+
+int chord_status_cmd(int argc, char **argv)
+{
+  (void)argc;
+  (void)argv;
+  debug_print();
+  return 0;
+}
+
+void dump_block(unsigned char *cont) {
+    for(int i = 0;i<(128/16);i++) {
+        for(int e = 0;e<16;e++) {
+          printf("%02x",cont[(i*16)+e]);
+        }
+        printf("\n");
+    }
+}
+
+int chord_dump_block(int argc, char **argv) {
+  if (argc < 2) {
+        printf("usage: %s <block>\n", argv[0]);
+        return 1;
+  }
+  int block = atoi(argv[1]);
+  uint32_t addr = (block*128);
+  unsigned char ret[128];
+  memset(ret,0,sizeof(ret));
+  if(dev.driver->read(&dev,ret,addr-(addr%128),128) < 0) {
+    printf("error on read addr %p\n",(void*)addr);
+    return -1;
+  }
+  printf("read addr %p success\n",(void*)addr);
+  dump_block(ret);
+  return 0;
+}
+
+int chord_read_cmd(int argc, char **argv) {
+  if (argc < 2) {
+        printf("usage: %s <addr>\n", argv[0]);
+        return 1;
+  }
+  uint32_t addr = atoi(argv[1]);
+  unsigned char ret[128];
+  memset(ret,0,sizeof(ret));
+  if(dev.driver->read(&dev,ret,addr,128) < 0) {
+    printf("error on read addr %p\n",(void*)addr);
+    return -1;
+  }
+  printf("read addr %p success: %s\n",(void*)addr,ret);
+  return 0;
+}
+
+int chord_write_cmd(int argc, char **argv) {
+  if (argc < 3) {
+        printf("usage: %s <addr> <data>\n", argv[0]);
+        return 1;
+  }
+  uint32_t addr = atoi(argv[1]);
+  if(dev.driver->write(&dev,(const void *)argv[2],addr,strlen(argv[2])+1) < 0) {
+    printf("error on write %s on addr %p\n",argv[2],(void*)addr);
+    return -1;
+  }
+  printf("write addr %p success: %s\n",(void*)addr,argv[2]);
+  return 0;
+}
+
+int
+chord_read_test(int argc, char **argv) {
+    if (argc < 3) {
+        printf("usage: %s <addr> <data>\n", argv[0]);
+        return 1;
+  }
+  uint32_t addr = atoi(argv[1]);
+  uint32_t size = atoi(argv[2]);
+  unsigned char *data = malloc(size);
+  printf("read %d bytes start %d",size,addr);
+  if(dev.driver->read(&dev,data,addr,size) < 0) {
+    printf("error on read addr %p\n",(void*)addr);
+    return -1;
+  }
+  printf("read addr %p success\n",(void*)addr);
+  printf("sanity check!\n");
+  for(uint32_t i = 0;i<size;i++) {
+    if(data[i] != 0xac) {
+      printf("Error on read byte %d\n",i);
+      return -1;
+    }
+  }
+  printf("sanity check success checked %d bytes == %d!\n",size,0xac);
+
+  return 0;
+}
+
+int
+chord_write_benchmark(int argc, char **argv) {
+  if (argc < 2) {
+        printf("usage: %s <nr>\n", argv[0]);
+        return 1;
+  }
+  uint32_t nr = atoi(argv[1]);
+  uint32_t size = 128;
+  unsigned char *data = malloc(size);
+  memset(data,0xac,size);
+  printf("write %d bytes",nr*size);
+  clock_t start = clock();
+  for(uint32_t i = 0;i < nr;i++) {
+    uint32_t addr = (rand()%10)*size;
+    if(dev.driver->write(&dev,data,addr,size) < 0) {
+      printf("error on write on addr %p\n",(void*)addr);
+      return -1;
+    }
+  }
+  clock_t end = clock();
+  int t = (int)(end-start);
+  assert(t > 0);
+  printf("write benchmark success write %d byte in %d sec %db/clocks %ld clocks per sec\n",nr*128,t,((int)((nr*size)/t)),CLOCKS_PER_SEC);
+  return 0;
+}
+
+int
+chord_write_test(int argc, char **argv) {
+    if (argc < 3) {
+        printf("usage: %s <addr> <data>\n", argv[0]);
+        return 1;
+  }
+  uint32_t addr = atoi(argv[1]);
+  uint32_t size = atoi(argv[2]);
+  unsigned char *data = malloc(size);
+  memset(data,0xac,size);
+  printf("write %d bytes start %d",size,addr);
+  if(dev.driver->write(&dev,data,addr,size) < 0) {
+    printf("error on write on addr %p\n",(void*)addr);
+    return -1;
+  }
+  printf("write addr %p success\n",(void*)addr);
+  return 0;
+}
+
+int
+_mount(int argc, char **argv) {
+    (void)argc;
+    (void)argv;
+    if(!fs_desc.dev) {
+        fs_desc.dev = &dev;
+    }
+    int res = vfs_mount(&flash_mount);
+    if (res < 0) {
+        printf("Error while mounting %s...try format\n", FLASH_MOUNT_POINT);
+        return 1;
+    }
+
+    printf("%s successfully mounted\n", FLASH_MOUNT_POINT);
+    return 0;
+}
+
+int _format(int argc, char **argv) {
+    (void)argc;
+    (void)argv;
+    fs_desc.dev = &dev;
+    int res = vfs_format(&flash_mount);
+    if (res < 0) {
+        printf("Error while formatting %s\n", FLASH_MOUNT_POINT);
+        return 1;
+    }
+
+    printf("%s successfully formatted\n", FLASH_MOUNT_POINT);
+    return 0;
+}
+
+int _cat(int argc, char **argv)
+{
+    if (argc < 2) {
+        printf("Usage: %s <file>\n", argv[0]);
+        return 1;
+    }
+    /* With newlib, low-level syscalls are plugged to RIOT vfs
+     * on native, open/read/write/close/... are plugged to RIOT vfs */
+#ifdef MODULE_NEWLIB
+    FILE *f = fopen(argv[1], "r");
+    if (f == NULL) {
+        printf("file %s does not exist\n", argv[1]);
+        return 1;
+    }
+    char c;
+    while (fread(&c, 1, 1, f) != 0) {
+        putchar(c);
+    }
+    fclose(f);
+#else
+    int fd = open(argv[1], O_RDONLY);
+    if (fd < 0) {
+        printf("file %s does not exist\n", argv[1]);
+        return 1;
+    }
+    char c;
+    while (read(fd, &c, 1) != 0) {
+        putchar(c);
+    }
+    close(fd);
+#endif
+    return 0;
+}
+
+int _tee(int argc, char **argv)
+{
+    if (argc != 3) {
+        printf("Usage: %s <file> <str>\n", argv[0]);
+        return 1;
+    }
+
+#ifdef MODULE_NEWLIB
+    FILE *f = fopen(argv[1], "w+");
+    if (f == NULL) {
+        printf("error while trying to create %s\n", argv[1]);
+        return 1;
+    }
+    if (fwrite(argv[2], 1, strlen(argv[2]), f) != strlen(argv[2])) {
+        puts("Error while writing");
+    }
+    fclose(f);
+#else
+    int fd = open(argv[1], O_RDWR | O_CREAT);
+    if (fd < 0) {
+        printf("error while trying to create %s\n", argv[1]);
+        return 1;
+    }
+    if (write(fd, argv[2], strlen(argv[2])) != (ssize_t)strlen(argv[2])) {
+        puts("Error while writing");
+    }
+    close(fd);
+#endif
     return 0;
 }
 

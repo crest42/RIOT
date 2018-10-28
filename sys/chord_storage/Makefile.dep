@@ -1,0 +1,4 @@
+EXTERNAL_MODULE_DIRS += $(RIOTBASE)/chord_test/chord/src/
+EXTERNAL_MODULE_DIRS += $(RIOTBASE)/chord_test/CHash/
+USEMODULE += chord
+USEMODULE += chash
