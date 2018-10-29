@@ -4,6 +4,10 @@
 #include "hashes.h"
 #include "hashes/sha1.h"
 
+
+extern struct chash_backend backend;
+extern struct chash_frontend frontend;
+
 int
 hash(unsigned char* out,
      const unsigned char* in,
@@ -73,8 +77,9 @@ int add_node_wrapper(char *addr) {
     struct node *mynode = get_own_node();
     printf("start chord\n");
     chord_start(mynode,&partner);
-    struct chash_storage_backend b = {.get = chash_linked_list_get, .put = chash_linked_list_put, .data = NULL};
-    init_chash(&b);
+    struct chash_backend b = {.get = chash_linked_list_get, .put = chash_linked_list_put, .data = NULL};
+    struct chash_frontend f = {.get = chash_mirror_get, .put = chash_mirror_put, .put_handler = handle_put, .get_handler = handle_get, .data = NULL};
+    init_chash(&b, &f);
     return 0;
 }
 
@@ -118,8 +123,10 @@ int mtd_read(mtd_dev_t *mtd, void *dest, uint32_t addr, uint32_t count) {
             tmp = remainder;
         }
         remainder -= tmp;
-        if(chash_get_block(block_start+i,(unsigned char *)dest+read) != 0) {
-            //printf("error in read block\n");
+        uint32_t block = block_start + i;
+        if (frontend.get(sizeof(uint32_t), (unsigned char *)(&block),tmp,((unsigned char *)dest)+read) != 0)
+        {
+                //printf("error in read block\n");
         }
         read += tmp;
     }
@@ -148,14 +155,17 @@ int mtd_write(mtd_dev_t *mtd, const void *src, uint32_t addr, uint32_t count) {
             tmp = mtd->page_size-(offset);
         }
         //printf("Write Block %d with offset %d and size %d\n",i,offset,tmp);
-        if(chash_put_block(((unsigned char *)src)+(count-remainder),block_start+i,offset,tmp) != 0) {
-            //printf("error while reading block\n");
-        }
+        uint32_t block = block_start + i;
+        if (frontend.put(sizeof(uint32_t),(unsigned char *)&block,offset,tmp,((unsigned char *)src) + (count - remainder)) != 0)
+            {
+                //printf("error while reading block\n");
+            }
         remainder -= tmp;
     }
     //printf("read %d byte\n",count-remainder);
     return count-remainder;
 }
+
 int mtd_erase(mtd_dev_t *mtd, uint32_t addr, uint32_t count) {
     assert(power_state == MTD_POWER_UP);
     assert(count > 0);
@@ -175,7 +185,9 @@ int mtd_erase(mtd_dev_t *mtd, uint32_t addr, uint32_t count) {
             tmp = remainder;
         }
         remainder -= tmp;
-        if(chash_put_block(src,block_start+i,0,tmp) != 0) {
+        uint32_t block = block_start + i;
+        if (frontend.put(sizeof(uint32_t),(unsigned char *)&block,0, remainder, src) != 0)
+        {
             return -1;
         }
     }
