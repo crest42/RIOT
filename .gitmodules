@@ -5,3 +5,4 @@
 [submodule "chord_test/CHash"]
 	path = chord_test/CHash
 	url = https://github.com/crest42/CHash
+	branch = storage
