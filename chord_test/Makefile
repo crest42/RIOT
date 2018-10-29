@@ -2,6 +2,8 @@
 APPLICATION = chord_test
 EXTERNAL_MODULE_DIRS += $(CURDIR)/chord/src/
 EXTERNAL_MODULE_DIRS += $(CURDIR)/CHash
+EXTERNAL_MODULE_DIRS += $(CURDIR)/CHash/backends
+EXTERNAL_MODULE_DIRS += $(CURDIR)/CHash/frontends
 #EXTERNAL_MODULE_DIRS += $(RIOTBASE)/sys/chord_storage
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
@@ -35,6 +37,8 @@ USEMODULE += posix_time
 # Add also the shell, some shell commands
 USEMODULE += chord
 USEMODULE += chash
+USEMODULE += chash_backend_linked
+USEMODULE += chash_frontend_mirror
 USEMODULE += chord_storage
 USEMODULE += shell
 USEMODULE += shell_commands
