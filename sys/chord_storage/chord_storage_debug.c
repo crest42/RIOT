@@ -195,11 +195,11 @@ debug_print_keys(void)
   printf("keylist of %d:\n", mynode->id);
 
   for (struct key* start = *first_key; start != NULL; start = start->next) {
-    printf("Key %d: size: %u id: %d owner: %d next: %p\n",
+    printf("Key %d: size: %u id: %d block: %d next: %p\n",
            i,
            start->size,
            start->id,
-           start->owner,
+           start->block,
            (void *)start->next);
     i++;
   }
