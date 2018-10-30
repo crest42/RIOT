@@ -56,14 +56,14 @@ mtd_dev_t dev;
 int chord_cmd(int argc, char **argv)
 {
     if (argc < 2) {
-        printf("usage: %s [master|slave]\n", argv[0]);
+        printf("usage: %s [new|join]\n", argv[0]);
         return 1;
     }
 
-    if (strcmp(argv[1], "master") == 0) {
-        printf("start master node\n");
+    if (strcmp(argv[1], "new") == 0) {
+        printf("start new node\n");
         if (argc < 3) {
-            printf("usage: %s master <addr>\n",
+            printf("usage: %s new <addr>\n",
                    argv[0]);
             return 1;
         }
@@ -73,10 +73,10 @@ int chord_cmd(int argc, char **argv)
         }
         add_node_wrapper(NULL);
     }
-    else if (strcmp(argv[1], "slave") == 0) {
-        printf("create slave node\n");
+    else if (strcmp(argv[1], "join") == 0) {
+        printf("join node\n");
         if (argc < 4) {
-            printf("usage: %s slave <slaveip> <masterip>\n", argv[0]);
+            printf("usage: %s join <ownip> <partnerip>\n", argv[0]);
             return 1;
         }
         if (init_chord_wrapper(argv[2]) == CHORD_ERR) {
