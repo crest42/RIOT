@@ -77,7 +77,7 @@ int add_node_wrapper(char *addr) {
     struct node *mynode = get_own_node();
     printf("start chord\n");
     chord_start(mynode,&partner);
-    struct chash_backend b = {.get = chash_linked_list_get, .put = chash_linked_list_put, .data = NULL, .backend_periodic_hook = chash_linked_list_maint};
+    struct chash_backend b = {.get = chash_linked_list_get, .put = chash_linked_list_put, .data = NULL, .backend_periodic_hook = chash_linked_list_maint, .sync_handler = handle_sync};
     struct chash_frontend f = {.get = chash_mirror_get, .put = chash_mirror_put, .put_handler = handle_put, .get_handler = handle_get, .data = NULL, .frontend_periodic_hook = NULL};
     init_chash(&b, &f);
     return 0;
@@ -178,7 +178,7 @@ int mtd_erase(mtd_dev_t *mtd, uint32_t addr, uint32_t count) {
     assert(block_end >= block_start);
     uint32_t block_count = (block_end-block_start)+1;
     uint32_t remainder = count;
-    printf("Write Block %d->%d (%d blocks)\n",block_start,block_end,block_count);
+    //printf("Write Block %d->%d (%d blocks)\n",block_start,block_end,block_count);
     for(uint32_t i = 0;i<block_count;i++) {
         uint32_t tmp = mtd->page_size;
         if(remainder < mtd->page_size) {
