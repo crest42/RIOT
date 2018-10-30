@@ -1,6 +1,6 @@
 examples/chord_test
 ======================
-This application is a example implementation of my distributed storage build over an DHT network.
+This application is a example implementation of my distributed storage build over an DHT network. Also a big thanks to everyone involved in the RIOT project to make this possible. Parts of this README are copied from the posix test application.
 
 Usage
 =====
