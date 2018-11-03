@@ -36,6 +36,9 @@
 #include <stdarg.h>
 #include "mtd.h"
 #include "fs/littlefs_fs.h"
+#include <net/gnrc/netif.h>
+#define JOIN_ADDR "fd5d:12c9:2201:1:200d:97ff:fea3:afe9"
+
 #define HELLO_WORLD_CONTENT "Hello World!\n"
 #define HELLO_RIOT_CONTENT  "Hello RIOT!\n"
 #define FLASH_MOUNT_POINT   "/sda"
@@ -55,35 +58,51 @@ mtd_dev_t dev;
 
 int chord_cmd(int argc, char **argv)
 {
-    if (argc < 2) {
+    if (argc < 2)
+    {
         printf("usage: %s [new|join]\n", argv[0]);
         return 1;
     }
-
     if (strcmp(argv[1], "new") == 0) {
         printf("start new node\n");
         if (argc < 3) {
-            printf("usage: %s new <addr>\n",
-                   argv[0]);
-            return 1;
-        }
-        if (init_chord_wrapper(argv[2]) == CHORD_ERR) {
-            printf("error init chord\n");
-            return -1;
+            if (init_chord_wrapper(JOIN_ADDR) == CHORD_ERR) {
+                printf("error init chord\n");
+                return -1;
+            }
+        } else {
+            if (init_chord_wrapper(argv[2]) == CHORD_ERR) {
+                printf("error init chord\n");
+                return -1;
+            }
         }
         add_node_wrapper(NULL);
     }
     else if (strcmp(argv[1], "join") == 0) {
         printf("join node\n");
         if (argc < 4) {
-            printf("usage: %s join <ownip> <partnerip>\n", argv[0]);
-            return 1;
+            char addr_str[IPV6_ADDR_MAX_STR_LEN];
+            for (gnrc_netif_t *iface = gnrc_netif_iter(NULL); iface != NULL; iface = gnrc_netif_iter(iface))
+            {
+                for (int e = 0; e < GNRC_NETIF_IPV6_ADDRS_NUMOF;e++) {
+                    if (!(ipv6_addr_is_link_local(&iface->ipv6.addrs[e]))) {
+                        ipv6_addr_to_str(addr_str, &iface->ipv6.addrs[e], sizeof(addr_str));
+                        break;
+                    }
+                }
+            }
+            if (init_chord_wrapper(addr_str) == CHORD_ERR) {
+                printf("error init chord\n");
+                return -1;
+            }
+            add_node_wrapper(JOIN_ADDR);
+        } else {
+            if (init_chord_wrapper(argv[2]) == CHORD_ERR) {
+                printf("error init chord\n");
+                return -1;
+            }
+            add_node_wrapper(argv[3]);
         }
-        if (init_chord_wrapper(argv[2]) == CHORD_ERR) {
-             printf("error init chord\n");
-            return -1;
-        }
-        add_node_wrapper(argv[3]);
 
     }
     else {
