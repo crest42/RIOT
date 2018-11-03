@@ -9,12 +9,13 @@ EXTERNAL_MODULE_DIRS += $(CURDIR)/CHash/frontends
 BOARD ?= native
 IPV6_STATIC_LLADDR ?= '"::1"'
 CFLAGS += -DGNRC_IPV6_STATIC_LLADDR=$(STATIC_IPV6_LLADDR)
+
 # This has to be the absolute path to the RIOT base directory:
 RIOTBASE ?= $(CURDIR)/..
-#CHORDCCFLAGS +=-DDEBUG_ENABLE
-CHASHCCFLAGS +=-DDEBUG_ENABLE
-#CFLAGS +=-DDEBUG_ENABLE
-
+#CHORDCCFLAGS += -DDEBUG_ENABLE
+#CHASHCCFLAGS += -DDEBUG_ENABLE
+#CFLAGS += -DDEBUG_ENABLE
+CFLAGS += -DPOSIX_SETSOCKOPT
 BOARD_INSUFFICIENT_MEMORY := airfy-beacon arduino-duemilanove arduino-mega2560 \
                              arduino-uno chronos mega-xplained msb-430 \
                              msb-430h nrf51dongle nrf6310 nucleo-f031k6 \

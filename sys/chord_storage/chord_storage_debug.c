@@ -105,8 +105,8 @@ debug_printf(unsigned long t,
   if (level <= ERROR) {
     //out = stderr;
   }
-
-  if ((level & DEBUG_LEVEL) != level) {
+  if ((level & DEBUG_LEVEL) != level)
+  {
     return;
   }
   char max_func_name[DEBUG_MAX_FUNC_NAME];

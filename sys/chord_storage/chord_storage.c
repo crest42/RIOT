@@ -77,7 +77,7 @@ int add_node_wrapper(char *addr) {
     struct node *mynode = get_own_node();
     printf("start chord\n");
     chord_start(mynode,&partner);
-    struct chash_backend b = {.get = chash_linked_list_get, .put = chash_linked_list_put, .data = NULL, .backend_periodic_hook = chash_linked_list_maint, .sync_handler = handle_sync};
+    struct chash_backend b = {.get = chash_linked_list_get, .put = chash_linked_list_put, .data = NULL, .backend_periodic_hook = chash_linked_list_maint, .sync_handler = handle_sync, .sync_fetch_handler = handle_sync_fetch};
     struct chash_frontend f = {.get = chash_mirror_get, .put = chash_mirror_put, .put_handler = handle_put, .get_handler = handle_get, .data = NULL, .frontend_periodic_hook = NULL};
     init_chash(&b, &f);
     return 0;
