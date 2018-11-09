@@ -37,13 +37,14 @@
 #include "mtd.h"
 #include "fs/littlefs_fs.h"
 #include <net/gnrc/netif.h>
-#define JOIN_ADDR "fd5d:12c9:2201:1:200d:97ff:fea3:afe9"
+#define JOIN_ADDR "2001:468:181:f100:c05a:81ff:feb6:bd5d"
 
 #define HELLO_WORLD_CONTENT "Hello World!\n"
 #define HELLO_RIOT_CONTENT  "Hello RIOT!\n"
 #define FLASH_MOUNT_POINT   "/sda"
 #define FS_DRIVER littlefs_file_system
-
+#define SERVER_MSG_QUEUE_SIZE   (32)
+#define SERVER_BUFFER_SIZE      (512)
 static littlefs_desc_t fs_desc = {
     .lock = MUTEX_INIT,
 };

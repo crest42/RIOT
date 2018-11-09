@@ -24,8 +24,9 @@
 #include <fcntl.h>
 #include "msg.h"
 #include "shell.h"
+#include "net/sock/udp.h"
 
-#define MAIN_MSG_QUEUE_SIZE (4)
+#define MAIN_MSG_QUEUE_SIZE (8)
 static msg_t main_msg_queue[MAIN_MSG_QUEUE_SIZE];
 
 extern int chord_cmd(int argc, char **argv);
@@ -62,6 +63,9 @@ int main(void)
     /* a sendto() call performs an implicit bind(), hence, a message queue is
      * required for the thread executing the shell */
     msg_init_queue(main_msg_queue, MAIN_MSG_QUEUE_SIZE);
+    static gnrc_netreg_entry_t _udp_handler;
+    gnrc_netreg_entry_init_pid(&_udp_handler, GNRC_NETREG_DEMUX_CTX_ALL,
+                                 sched_active_pid);
     puts("RIOT socket example application");
     /* start shell */
     puts("All up, running the shell now");
