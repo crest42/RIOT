@@ -7,23 +7,16 @@ EXTERNAL_MODULE_DIRS += $(CURDIR)/CHash/frontends
 #EXTERNAL_MODULE_DIRS += $(RIOTBASE)/sys/chord_storage
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
-IPV6_STATIC_LLADDR ?= '"::1"'
-CFLAGS += -DGNRC_IPV6_STATIC_LLADDR=$(STATIC_IPV6_LLADDR)
 
 # This has to be the absolute path to the RIOT base directory:
 RIOTBASE ?= $(CURDIR)/..
 #CHORDCCFLAGS += -DDEBUG_ENABLE
 #CHASHCCFLAGS += -DDEBUG_ENABLE
 #CFLAGS += -DDEBUG_ENABLE
-CFLAGS += -DPOSIX_SETSOCKOPT
-BOARD_INSUFFICIENT_MEMORY := airfy-beacon arduino-duemilanove arduino-mega2560 \
-                             arduino-uno chronos mega-xplained msb-430 \
-                             msb-430h nrf51dongle nrf6310 nucleo-f031k6 \
-                             nucleo-f042k6 nucleo-l031k6 nucleo-f030r8 \
-                             nucleo-f070rb nucleo-f072rb nucleo-f334r8 \
-                             nucleo-f303k8 nucleo-l053r8 stm32f0discovery \
-                             telosb wsn430-v1_3b wsn430-v1_4 yunjia-nrf51822 \
-                             waspmote-pro z1
+CFLAGS += -DGNRC_IPV6_NIB_NUMOF=32
+CFLAGS += -DRIOT
+#CFLAGS += -DPOSIX_SETSOCKOPT
+
 
 # Include packages that pull up and auto-init the link layer.
 # NOTE: 6LoWPAN will be included if IEEE802.15.4 devices are present
