@@ -8,6 +8,48 @@
 extern struct chash_backend backend;
 extern struct chash_frontend frontend;
 
+int sock_wrapper_open(struct socket_wrapper *wrapper,struct node *node,struct node *target,int local_port,int remote_port) {
+  assert(wrapper);
+  memset(wrapper,0,sizeof(struct socket_wrapper));
+  sock_udp_ep_t *local = NULL, *remote = NULL;
+  if(node) {
+    local = &wrapper->local;
+    local->family = AF_INET6;
+    local->port = local_port;
+    memcpy(&local->addr.ipv6,&node->addr,sizeof(ipv6_addr_t));
+  } else {
+    memset(&wrapper->local,0,sizeof(wrapper->local));
+  }
+  if(target) {
+    remote = &wrapper->remote;
+    remote->family = AF_INET6;
+    remote->port = remote_port;
+    memcpy(&remote->addr.ipv6,&target->addr,sizeof(ipv6_addr_t));
+  } else {
+    memset(&wrapper->remote,0,sizeof(wrapper->remote));
+  }
+
+  return sock_udp_create(&wrapper->sock, local, remote, SOCK_FLAGS_REUSE_EP);
+}
+
+int sock_wrapper_recv(struct socket_wrapper *wrapper,unsigned char *buf, size_t buf_size, int flags) {
+  return sock_udp_recv(&wrapper->sock, buf, buf_size, flags, &wrapper->remote);
+}
+
+int sock_wrapper_send(struct socket_wrapper *wrapper,unsigned char *buf, size_t buf_size, int flags) {
+  (void)flags;
+  int ret = sock_udp_send(&wrapper->sock, buf, buf_size, &wrapper->remote);
+  printf("asd: %d %d %d %d %d %d %d\n",ret,EADDRINUSE,EAFNOSUPPORT,EHOSTUNREACH,EINVAL,ENOMEM,ENOTCONN);
+  printf("%d\n",wrapper->remote.port);
+  return ret;
+}
+
+int sock_wrapper_close(struct socket_wrapper *wrapper) {
+    sock_udp_close(&wrapper->sock);
+    return CHORD_OK;
+}
+
+
 int
 hash(unsigned char* out,
      const unsigned char* in,
@@ -24,11 +66,11 @@ hash(unsigned char* out,
 #define SERVER_MSG_QUEUE_SIZE   (8)
 #define SERVER_BUFFER_SIZE      (64)
 //static char server_buffer_p[SERVER_BUFFER_SIZE];
-static char server_stack_p[THREAD_STACKSIZE_DEFAULT];
+static char server_stack_p[THREAD_STACKSIZE_DEFAULT*2];
 //static msg_t server_msg_queue_p[SERVER_MSG_QUEUE_SIZE];
 
 //static char server_buffer_w[SERVER_BUFFER_SIZE];
-static char server_stack_w[THREAD_STACKSIZE_DEFAULT];
+static char server_stack_w[THREAD_STACKSIZE_DEFAULT*2];
 //static msg_t server_msg_queue_w[SERVER_MSG_QUEUE_SIZE];
 
 enum mtd_power_state power_state = MTD_POWER_UP;
@@ -37,19 +79,22 @@ struct node partner;
 
 static int chord_start(struct node *mynode, struct node *partner)
 {
+
     /* start server (which means registering pktdump for the chosen port) */
-    if (thread_create(server_stack_w, sizeof(server_stack_w), THREAD_PRIORITY_MAIN - 1,
+    if (thread_create(server_stack_w, sizeof(server_stack_w), THREAD_PRIORITY_MAIN -2,
                       THREAD_CREATE_STACKTEST,
                       thread_wait_for_msg, mynode, "CHORD msg") <= KERNEL_PID_UNDEF) {
         puts("error initializing thread");
         return 1;
     }
-    if (thread_create(server_stack_p, sizeof(server_stack_p), THREAD_PRIORITY_MAIN - 1,
+    if (thread_create(server_stack_p, sizeof(server_stack_p), THREAD_PRIORITY_MAIN -1 ,
                       THREAD_CREATE_STACKTEST,
                       thread_periodic, partner, "CHORD Periodic") <= KERNEL_PID_UNDEF) {
         puts("error initializing thread");
         return 1;
     }
+
+
     return 0;
 }
 
@@ -84,6 +129,7 @@ int add_node_wrapper(char *addr) {
 }
 
 int mtd_init(mtd_dev_t *mtd) {
+    (void)mtd;
     assert(power_state == MTD_POWER_UP);
     assert(mtd);
     assert(mtd->sector_count > 0);
@@ -194,6 +240,7 @@ int mtd_erase(mtd_dev_t *mtd, uint32_t addr, uint32_t count) {
     return 0;
 }
 int mtd_power(mtd_dev_t *mtd, enum mtd_power_state power){
+    (void)mtd;
     assert(mtd);
     power_state = power;
     return 0;

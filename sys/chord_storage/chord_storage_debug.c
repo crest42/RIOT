@@ -116,11 +116,11 @@ debug_printf(unsigned long t,
     max_func_name[i] = ' ';
   }
   nodeid_t suc = 0, pre = 0;
-  if(mynode->predecessor) {
-    pre = mynode->predecessor->id;
+  if(mynode->additional->predecessor) {
+    pre = mynode->additional->predecessor->id;
   }
-  if(mynode->successor) {
-    suc = mynode->successor->id;
+  if(mynode->additional->successor) {
+    suc = mynode->additional->successor->id;
   }
 
   fprintf(out,
@@ -169,8 +169,8 @@ struct node *mynode = get_own_node();
   printf("successorlist of %d:\n", mynode->id);
 
   int myid = -1;
-  if (!node_is_null(mynode->successor)) {
-    myid = mynode->successor->id;
+  if (!node_is_null(mynode->additional->successor)) {
+    myid = mynode->additional->successor->id;
   }
   for (int i = 0; i < SUCCESSORLIST_SIZE; i++) {
     if (!node_is_null(&successorlist[i])) {
@@ -209,14 +209,14 @@ debug_print_keys(void)
 void
 debug_print_node(struct node* node, bool verbose)
 {
-  if (!node_is_null(node->predecessor)) {
-    printf("%d", node->predecessor->id);
+  if (!node_is_null(node->additional->predecessor)) {
+    printf("%d", node->additional->predecessor->id);
   } else {
     printf("NULL");
   }
   printf("<-%d->", node->id);
-  if (node->successor) {
-    printf("%d", node->successor->id);
+  if (node->additional->successor) {
+    printf("%d", node->additional->successor->id);
   } else {
     printf("NULL");
   }
