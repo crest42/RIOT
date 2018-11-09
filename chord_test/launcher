@@ -1,0 +1,38 @@
+#!/bin/bash
+function ctrl_c() {
+        echo "$PORT $LOCKFILE exit"
+        rm -f $LOCKFILE
+}
+
+LOCKDIR=/home/robin/locks
+RIOTAPP=/home/robin/git/RIOT/chord_test
+
+mkdir -p $LOCKDIR
+a=( $( ls -v /home/robin/locks ) )
+NUMLOCKS=${#a[@]}
+SELF=1
+echo "Number of lock files: $NUMLOCKS"
+if [ "$NUMLOCKS" == "0" ]; then
+  PORT=tap$SELF
+else
+  for i in "${a[@]}"; do
+    if [ "$i" == "$SELF" ]; then
+      ((SELF++)); 
+    else
+      PORT=tap$SELF
+    fi
+  done
+  LAST=${a[-1]}
+  echo "$SELF $LAST"
+  if [ "$SELF" -gt "$LAST" ]; then
+    PORT=tap$SELF
+  fi
+fi
+LOCKFILE=$LOCKDIR/$SELF
+touch $LOCKFILE
+trap ctrl_c 1 2 3 6 9 14 15
+echo $PORT
+export PORT
+cd $RIOTAPP
+make all term
+ctrl_c
