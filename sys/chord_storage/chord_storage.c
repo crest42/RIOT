@@ -39,8 +39,6 @@ int sock_wrapper_recv(struct socket_wrapper *wrapper,unsigned char *buf, size_t 
 int sock_wrapper_send(struct socket_wrapper *wrapper,unsigned char *buf, size_t buf_size, int flags) {
   (void)flags;
   int ret = sock_udp_send(&wrapper->sock, buf, buf_size, &wrapper->remote);
-  printf("asd: %d %d %d %d %d %d %d\n",ret,EADDRINUSE,EAFNOSUPPORT,EHOSTUNREACH,EINVAL,ENOMEM,ENOTCONN);
-  printf("%d\n",wrapper->remote.port);
   return ret;
 }
 
@@ -77,19 +75,36 @@ enum mtd_power_state power_state = MTD_POWER_UP;
 enum node_type {NEW, JOIN};
 struct node partner;
 
+void *thread_wait_for_msg_wrapper(void *data) {
+  static msg_t _msg_q[16];
+  msg_init_queue(_msg_q, 16);
+  static gnrc_netreg_entry_t _udp_handler  = { .demux_ctx = 6667 };
+  gnrc_netreg_entry_init_pid(&_udp_handler, GNRC_NETREG_DEMUX_CTX_ALL,
+                                 sched_active_pid);
+  return thread_wait_for_msg(data);
+}
+void *thread_periodic_wrapper(void *data) {
+  static gnrc_netreg_entry_t _udp_handler  = { .demux_ctx = 6668 };
+  gnrc_netreg_entry_init_pid(&_udp_handler, GNRC_NETREG_DEMUX_CTX_ALL,
+                                 sched_active_pid);
+  static msg_t _msg_q[16];
+  msg_init_queue(_msg_q, 16);
+  return thread_periodic(data);
+}
+
 static int chord_start(struct node *mynode, struct node *partner)
 {
 
     /* start server (which means registering pktdump for the chosen port) */
     if (thread_create(server_stack_w, sizeof(server_stack_w), THREAD_PRIORITY_MAIN -2,
                       THREAD_CREATE_STACKTEST,
-                      thread_wait_for_msg, mynode, "CHORD msg") <= KERNEL_PID_UNDEF) {
+                      thread_wait_for_msg_wrapper, mynode, "CHORD msg") <= KERNEL_PID_UNDEF) {
         puts("error initializing thread");
         return 1;
     }
     if (thread_create(server_stack_p, sizeof(server_stack_p), THREAD_PRIORITY_MAIN -1 ,
                       THREAD_CREATE_STACKTEST,
-                      thread_periodic, partner, "CHORD Periodic") <= KERNEL_PID_UNDEF) {
+                      thread_periodic_wrapper, partner, "CHORD Periodic") <= KERNEL_PID_UNDEF) {
         puts("error initializing thread");
         return 1;
     }
