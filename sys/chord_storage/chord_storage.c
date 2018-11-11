@@ -115,8 +115,7 @@ static int chord_start(struct node *mynode, struct node *partner)
 
 int init_chord_wrapper(char *addr) {
     printf("init chord with addr %s\n",addr);
-    init_chord(addr);
-    return 0;
+    return init_chord(addr);
 }
 
 int debug_print(void) {

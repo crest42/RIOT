@@ -37,7 +37,8 @@
 #include "mtd.h"
 #include "fs/littlefs_fs.h"
 #include <net/gnrc/netif.h>
-#define JOIN_ADDR "2001:468:181:f100:c05a:81ff:feb6:bd5d"
+#include "net/gnrc.h"
+#define JOIN_ADDR "2001:468:181:f100:d40e:d6ff:fed9:766c"
 
 #define HELLO_WORLD_CONTENT "Hello World!\n"
 #define HELLO_RIOT_CONTENT  "Hello RIOT!\n"
@@ -64,9 +65,26 @@ int chord_cmd(int argc, char **argv)
         printf("usage: %s [new|join]\n", argv[0]);
         return 1;
     }
+    char addr_str[IPV6_ADDR_MAX_STR_LEN];
     if (strcmp(argv[1], "new") == 0) {
         printf("start new node\n");
         if (argc < 3) {
+            bool found = false;
+            while(!found) {
+                for (gnrc_netif_t *iface = gnrc_netif_iter(NULL); iface != NULL; iface = gnrc_netif_iter(iface))
+                {
+                    for (int e = 0; e < GNRC_NETIF_IPV6_ADDRS_NUMOF;e++) {
+                        if (!(ipv6_addr_is_link_local(&iface->ipv6.addrs[e]))) {
+                            ipv6_addr_to_str(addr_str, &iface->ipv6.addrs[e], sizeof(addr_str));
+                            if(memcmp(addr_str,JOIN_ADDR,sizeof(JOIN_ADDR)) == 0) {
+                                found = true;
+                            }
+                        }
+                    }
+                }
+                printf("master addr not found on if try again in 1 sec\n");
+                sleep(1);
+            }
             if (init_chord_wrapper(JOIN_ADDR) == CHORD_ERR) {
                 printf("error init chord\n");
                 return -1;
@@ -80,16 +98,29 @@ int chord_cmd(int argc, char **argv)
         add_node_wrapper(NULL);
     }
     else if (strcmp(argv[1], "join") == 0) {
+
         printf("join node\n");
-        if (argc < 4) {
-            char addr_str[IPV6_ADDR_MAX_STR_LEN];
-            for (gnrc_netif_t *iface = gnrc_netif_iter(NULL); iface != NULL; iface = gnrc_netif_iter(iface))
-            {
-                for (int e = 0; e < GNRC_NETIF_IPV6_ADDRS_NUMOF;e++) {
-                    if (!(ipv6_addr_is_link_local(&iface->ipv6.addrs[e]))) {
-                        ipv6_addr_to_str(addr_str, &iface->ipv6.addrs[e], sizeof(addr_str));
-                        break;
+        if (argc < 4)
+        {
+            bool valid = false;
+            while(!valid){
+                for (gnrc_netif_t *iface = gnrc_netif_iter(NULL); iface != NULL; iface = gnrc_netif_iter(iface))
+                {
+                    for (int e = 0; e < GNRC_NETIF_IPV6_ADDRS_NUMOF;e++) {
+                        if (!(ipv6_addr_is_link_local(&iface->ipv6.addrs[e]))) {
+                            ipv6_addr_to_str(addr_str, &iface->ipv6.addrs[e], sizeof(addr_str));
+                            uint8_t ipv6_addrs_flags = iface->ipv6.addrs_flags[e];
+                            if ((ipv6_addrs_flags & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK )== GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID)
+                            {
+                                valid = true;
+                                break;
+                            }
+                        }
                     }
+                }
+                if(!valid) {
+                    printf("no valid ipv6 addr found try again\n");
+                    sleep(1);
                 }
             }
             if (init_chord_wrapper(addr_str) == CHORD_ERR) {
@@ -97,14 +128,15 @@ int chord_cmd(int argc, char **argv)
                 return -1;
             }
             add_node_wrapper(JOIN_ADDR);
-        } else {
+        }
+        else
+        {
             if (init_chord_wrapper(argv[2]) == CHORD_ERR) {
                 printf("error init chord\n");
                 return -1;
             }
             add_node_wrapper(argv[3]);
         }
-
     }
     else {
         puts("error: invalid command");
