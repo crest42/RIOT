@@ -7,17 +7,20 @@
 
 extern struct chash_backend backend;
 extern struct chash_frontend frontend;
-
-int sock_wrapper_open(struct socket_wrapper *wrapper,struct node *node,struct node *target,int local_port,int remote_port) {
-  assert(wrapper);
-  memset(wrapper,0,sizeof(struct socket_wrapper));
-  sock_udp_ep_t *local = NULL, *remote = NULL;
-  if(node) {
-    local = &wrapper->local;
-    local->family = AF_INET6;
-    local->port = local_port;
-    memcpy(&local->addr.ipv6,&node->addr,sizeof(ipv6_addr_t));
-  } else {
+extern size_t read_b;
+extern size_t write_b;
+int sock_wrapper_open(struct socket_wrapper *wrapper, struct node *node, struct node *target, int local_port, int remote_port)
+{
+    assert(wrapper);
+    memset(wrapper, 0, sizeof(struct socket_wrapper));
+    sock_udp_ep_t *local = NULL, *remote = NULL;
+    if (node)
+    {
+        local = &wrapper->local;
+        local->family = AF_INET6;
+        local->port = local_port;
+        memcpy(&local->addr.ipv6, &node->addr, sizeof(ipv6_addr_t));
+    } else {
     memset(&wrapper->local,0,sizeof(wrapper->local));
   }
   if(target) {
@@ -33,12 +36,15 @@ int sock_wrapper_open(struct socket_wrapper *wrapper,struct node *node,struct no
 }
 
 int sock_wrapper_recv(struct socket_wrapper *wrapper,unsigned char *buf, size_t buf_size, int flags) {
-  return sock_udp_recv(&wrapper->sock, buf, buf_size, flags, &wrapper->remote);
+  int ret = sock_udp_recv(&wrapper->sock, buf, buf_size, flags, &wrapper->remote);
+  read_b += ret;
+  return ret;
 }
 
 int sock_wrapper_send(struct socket_wrapper *wrapper,unsigned char *buf, size_t buf_size, int flags) {
   (void)flags;
   int ret = sock_udp_send(&wrapper->sock, buf, buf_size, &wrapper->remote);
+  write_b += ret;
   return ret;
 }
 

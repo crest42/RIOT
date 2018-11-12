@@ -1,6 +1,7 @@
 #include "chord_storage.h"
 #include <stdarg.h>
 #include <stdio.h>
+
 static const char*
 log_level_to_string(enum log_level level)
 {
