@@ -9,6 +9,18 @@ extern struct chash_backend backend;
 extern struct chash_frontend frontend;
 extern size_t read_b;
 extern size_t write_b;
+static struct chash_backend b = {.get = chash_linked_list_get,
+                              .put = chash_linked_list_put,
+                              .backend_periodic_hook = chash_linked_list_maint,
+                              .periodic_data = NULL,
+                              .sync_handler = handle_sync,
+                              .sync_fetch_handler = handle_sync_fetch};
+static struct chash_frontend f = {.get = chash_mirror_get,
+                               .put = chash_mirror_put,
+                               .put_handler = handle_put,
+                               .get_handler = handle_get,
+                               .data = NULL,
+                               .frontend_periodic_hook = NULL};
 int sock_wrapper_open(struct socket_wrapper *wrapper, struct node *node, struct node *target, int local_port, int remote_port)
 {
     assert(wrapper);
@@ -142,20 +154,19 @@ int add_node_wrapper(char *addr) {
     struct node *mynode = get_own_node();
     printf("start chord\n");
     chord_start(mynode,&partner);
-    struct chash_backend b = {.get = chash_linked_list_get, .put = chash_linked_list_put, .data = NULL, .backend_periodic_hook = chash_linked_list_maint, .sync_handler = handle_sync, .sync_fetch_handler = handle_sync_fetch};
-    struct chash_frontend f = {.get = chash_mirror_get, .put = chash_mirror_put, .put_handler = handle_put, .get_handler = handle_get, .data = NULL, .frontend_periodic_hook = NULL};
     init_chash(&b, &f);
     return 0;
 }
 
 int mtd_init(mtd_dev_t *mtd) {
-    (void)mtd;
     assert(power_state == MTD_POWER_UP);
     assert(mtd);
     assert(mtd->sector_count > 0);
     assert(mtd->pages_per_sector == 1);
     assert(mtd->page_size == 128);
     memset(&partner,0,sizeof(partner));
+    struct hooks *h = get_hooks();
+    h->periodic_data = (void *)&mtd->sector_count;
     return 0;
 }
 

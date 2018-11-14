@@ -26,7 +26,7 @@ log_level_to_string(enum log_level level)
 }
 
  char*
-msg_to_string(chord_msg_t msg)
+msg_to_string(int msg)
 {
   switch (msg) {
     case MSG_TYPE_NULL:
@@ -125,11 +125,11 @@ debug_printf(unsigned long t,
   }
 
   fprintf(out,
-          "%lu: [%d<-%d->%d] [%s] %s: ",
-          t,
-          pre,
-          mynode->id,
-          suc,
+          "%lu: [%lu<-%lu->%lu] [%s] %s: ",
+          (long unsigned int)t,
+          (long unsigned int)pre,
+          (long unsigned int)mynode->id,
+          (long unsigned int)suc,
           log_level_to_string(level),
           max_func_name);
 
@@ -145,18 +145,18 @@ debug_print_fingertable(void)
 {
 struct fingertable_entry *fingertable = get_fingertable();  
   struct node *mynode = get_own_node();
-  printf("fingertable of %d:\n", mynode->id);
+  printf("fingertable of %u:\n", (unsigned int)mynode->id);
   for (int i = 0; i < FINGERTABLE_SIZE; i++) {
     if (!node_is_null(&fingertable[i].node)) {
-      printf("%d-%d: node(%d)\n",
-             fingertable[i].start,
-             (fingertable[i].start + fingertable[i].interval) % CHORD_RING_SIZE,
-             fingertable[i].node.id);
+      printf("%u-%u: node(%u)\n",
+             (unsigned int)fingertable[i].start,
+             (unsigned int)((fingertable[i].start + fingertable[i].interval) % CHORD_RING_SIZE),
+             (unsigned int)fingertable[i].node.id);
     } else {
-      printf("%d-%d: node(nil)\n",
-             fingertable[i].start,
-             (fingertable[i].start + fingertable[i].interval) %
-               CHORD_RING_SIZE);
+      printf("%u-%u: node(nil)\n",
+             (unsigned int)fingertable[i].start,
+             (unsigned int)((fingertable[i].start + fingertable[i].interval) %
+               CHORD_RING_SIZE));
     }
   }
 }
@@ -167,7 +167,7 @@ debug_print_successorlist(void)
     struct node *successorlist = get_successorlist();
 
 struct node *mynode = get_own_node();
-  printf("successorlist of %d:\n", mynode->id);
+  printf("successorlist of %u:\n", (unsigned int)mynode->id);
 
   int myid = -1;
   if (!node_is_null(mynode->additional->successor)) {
@@ -175,7 +175,7 @@ struct node *mynode = get_own_node();
   }
   for (int i = 0; i < SUCCESSORLIST_SIZE; i++) {
     if (!node_is_null(&successorlist[i])) {
-      printf("successor %d (>%d) is: %d\n", i, myid, successorlist[i].id);
+      printf("successor %d (>%u) is: %u\n", i, (unsigned int)myid, (unsigned int)successorlist[i].id);
     } else {
       printf("successor %d (>%d) is: null\n", i, myid);
     }
@@ -193,14 +193,14 @@ debug_print_keys(void)
     return;
   }
   int i = 0;
-  printf("keylist of %d:\n", mynode->id);
+  printf("keylist of %u:\n",(unsigned int)mynode->id);
 
   for (struct key* start = *first_key; start != NULL; start = start->next) {
-    printf("Key %d: size: %u id: %d block: %d next: %p\n",
+    printf("Key %d: size: %u id: %u block: %u next: %p\n",
            i,
-           start->size,
-           start->id,
-           start->block,
+           (unsigned int)start->size,
+           (unsigned int)start->id,
+           (unsigned int)start->block,
            (void *)start->next);
     i++;
   }
@@ -211,20 +211,20 @@ void
 debug_print_node(struct node* node, bool verbose)
 {
   if (!node_is_null(node->additional->predecessor)) {
-    printf("%d", node->additional->predecessor->id);
+    printf("%u", (unsigned int)node->additional->predecessor->id);
   } else {
     printf("NULL");
   }
-  printf("<-%d->", node->id);
+  printf("<-%u->", (unsigned int)node->id);
   if (node->additional->successor) {
-    printf("%d", node->additional->successor->id);
+    printf("%u", (unsigned int)node->additional->successor->id);
   } else {
     printf("NULL");
   }
   printf("\nchilds:\n");
   struct childs *c = get_childs();
   for(int i = 0;i<CHORD_TREE_CHILDS;i++) {
-    printf("child %d is %d and age %d\n",i,c->child[i].child,(int)(time(NULL)-c->child[i].t));
+    printf("child %d is %u and age %d\n",i,(unsigned int)c->child[i].child,(int)(time(NULL)-c->child[i].t));
   }
   struct aggregate *stats = get_stats();
   printf("aggregation information: %d nodes, size: %d/%d\n",stats->nodes,stats->used,stats->available);

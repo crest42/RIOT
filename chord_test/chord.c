@@ -164,6 +164,7 @@ int chord_status_cmd(int argc, char **argv)
 {
   (void)argc;
   (void)argv;
+  printf("mtd: sector_count: %u, pages_per_sector: %u page_size: %u sum_avaiable: %d\n",(unsigned int)dev.sector_count,(unsigned int)dev.pages_per_sector,(unsigned int)dev.page_size,(int)(dev.sector_count*dev.pages_per_sector*dev.page_size));
   debug_print();
   return 0;
 }
@@ -234,7 +235,7 @@ chord_read_test(int argc, char **argv) {
   uint32_t addr = atoi(argv[1]);
   uint32_t size = atoi(argv[2]);
   unsigned char *data = malloc(size);
-  printf("read %d bytes start %d",size,addr);
+  printf("read %u bytes start %u",(unsigned int)size,(unsigned int)addr);
   if(dev.driver->read(&dev,data,addr,size) < 0) {
     printf("error on read addr %p\n",(void*)addr);
     return -1;
@@ -243,11 +244,11 @@ chord_read_test(int argc, char **argv) {
   printf("sanity check!\n");
   for(uint32_t i = 0;i<size;i++) {
     if(data[i] != 0xac) {
-      printf("Error on read byte %d\n",i);
+      printf("Error on read byte %u\n",(unsigned int)i);
       return -1;
     }
   }
-  printf("sanity check success checked %d bytes == %d!\n",size,0xac);
+  printf("sanity check success checked %u bytes == %d!\n",(unsigned int)size,0xac);
 
   return 0;
 }
@@ -262,7 +263,7 @@ chord_write_benchmark(int argc, char **argv) {
   uint32_t size = 128;
   unsigned char *data = malloc(size);
   memset(data,0xac,size);
-  printf("write %d bytes",nr*size);
+  printf("write %lu bytes",(long unsigned int)nr*size);
   clock_t start = clock();
   for(uint32_t i = 0;i < nr;i++) {
     uint32_t addr = (rand()%10)*size;
@@ -274,7 +275,7 @@ chord_write_benchmark(int argc, char **argv) {
   clock_t end = clock();
   int t = (int)(end-start);
   assert(t > 0);
-  printf("write benchmark success write %d byte in %d sec %db/clocks %ld clocks per sec\n",nr*128,t,((int)((nr*size)/t)),CLOCKS_PER_SEC);
+  printf("write benchmark success write %u byte in %d sec %db/clocks %lu clocks per sec\n",(unsigned int)nr*128,t,((int)((nr*size)/t)),(long unsigned int)CLOCKS_PER_SEC);
   return 0;
 }
 
@@ -288,7 +289,7 @@ chord_write_test(int argc, char **argv) {
   uint32_t size = atoi(argv[2]);
   unsigned char *data = malloc(size);
   memset(data,0xac,size);
-  printf("write %d bytes start %d",size,addr);
+  printf("write %u bytes start %u\n",(unsigned int)size,(unsigned int)addr);
   if(dev.driver->write(&dev,data,addr,size) < 0) {
     printf("error on write on addr %p\n",(void*)addr);
     return -1;
