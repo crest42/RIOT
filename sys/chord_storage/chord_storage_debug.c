@@ -116,20 +116,26 @@ debug_printf(unsigned long t,
   for (int i = strlen(max_func_name); i < DEBUG_MAX_FUNC_NAME - 1; i++) {
     max_func_name[i] = ' ';
   }
-  nodeid_t suc = 0, pre = 0;
+  nodeid_t suc = 0, pre = 0, share = 0;
   if(mynode->additional->predecessor) {
     pre = mynode->additional->predecessor->id;
+    if(pre < mynode->id) {
+      share = mynode->id - pre;
+    } else {
+      share = (CHORD_RING_SIZE - pre) + mynode->id;
+    }
   }
   if(mynode->additional->successor) {
     suc = mynode->additional->successor->id;
   }
 
   fprintf(out,
-          "%lu: [%lu<-%lu->%lu] [%s] %s: ",
+          "%lu: [%lu<-%lu->%lu (%lu)] [%s] %s: ",
           (long unsigned int)t,
           (long unsigned int)pre,
           (long unsigned int)mynode->id,
           (long unsigned int)suc,
+          (long unsigned int)share,
           log_level_to_string(level),
           max_func_name);
 
