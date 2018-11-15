@@ -315,6 +315,43 @@ _mount(int argc, char **argv) {
     return 0;
 }
 
+int check_randomness(int argc, char **argv) {
+    (void)argc;
+    (void)argv;
+    int i = rand();
+    int num = CHORD_RING_SIZE;
+    int expected = 10;
+    double diff = 0;
+    int observed[num];
+
+    memset(observed, 0, sizeof(observed));
+    unsigned char n[HASH_DIGEST_SIZE];
+    hash(n, (unsigned char *)&i, sizeof(i), HASH_DIGEST_SIZE);
+    for (int i = 0; i < expected*num; i++)
+    {
+        hash(n, n, HASH_DIGEST_SIZE, HASH_DIGEST_SIZE);
+        nodeid_t tmp = get_mod_of_hash(n, CHORD_RING_SIZE);
+        observed[tmp]++;
+    }
+    int min = INT_MAX, min_id, max = 0, max_id;
+    for (int i = 0; i < CHORD_RING_SIZE; i++)
+    {
+        if(observed[i] < min) {
+            min = observed[i];
+            min_id = i;
+        }
+        if(observed[i] > max) {
+            max = observed[i];
+            max_id = i;
+        }
+        int o = ((observed[i] - expected) * (observed[i] - expected))/expected;
+        diff += o;
+        printf("%d: %d %o\n", i, observed[i],o);
+    }
+    printf("min: %d %d times max: %d %d times diff: %f 99%%: 14,68",min_id,min,max_id,max,diff);
+    return 0;
+}
+
 int _format(int argc, char **argv) {
     (void)argc;
     (void)argv;

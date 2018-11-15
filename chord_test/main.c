@@ -35,6 +35,7 @@ extern int chord_write_cmd(int argc, char **argv);
 extern int chord_status_cmd(int argc, char **argv);
 extern int chord_write_test(int argc, char **argv);
 extern int chord_read_test(int argc, char **argv);
+extern int check_randomness(int argc, char **argv);
 extern int chord_dump_block(int argc, char **argv);
 extern int _mount(int argc, char **argv);
 extern int _format(int argc, char **argv);
@@ -54,7 +55,7 @@ static const shell_command_t shell_commands[] = {
     { "tee", "write a string in a file", _tee },
     { "dump", "Dump a single block", chord_dump_block },
     { "bench", "Benchmark write" , chord_write_benchmark },
-
+    { "rand", "Randomness check" , check_randomness },
     { NULL, NULL, NULL }
 };
 
@@ -64,6 +65,14 @@ int main(void)
      * required for the thread executing the shell */
     msg_init_queue(main_msg_queue, MAIN_MSG_QUEUE_SIZE);
     /* start shell */
+    puts("Starting chord");
+    #ifdef CHORD_AUTOSTART
+    char **a = (char *[]){"chord", "join"};
+    chord_cmd(2, a);
+    #else
+   // char **a = (char *[]){"chord", "new"};
+    //chord_cmd(2, a);
+#endif
     puts("All up, running the shell now");
     char line_buf[SHELL_DEFAULT_BUFSIZE];
     shell_run(shell_commands, line_buf, SHELL_DEFAULT_BUFSIZE);
