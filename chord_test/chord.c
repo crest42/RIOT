@@ -58,6 +58,39 @@ static vfs_mount_t flash_mount = {
 FILE* default_out;
 mtd_dev_t dev;
 
+int chord_bs_cmd(int argc, char **argv) {
+    (void)argc;
+    (void)argv;
+    bool valid = false;
+    char addr_str[IPV6_ADDR_MAX_STR_LEN];
+    while(!valid){
+        for (gnrc_netif_t *iface = gnrc_netif_iter(NULL); iface != NULL; iface = gnrc_netif_iter(iface))
+        {
+            for (int e = 0; e < GNRC_NETIF_IPV6_ADDRS_NUMOF;e++) {
+                if ((ipv6_addr_is_link_local(&iface->ipv6.addrs[e]))) {
+                    ipv6_addr_to_str(addr_str, &iface->ipv6.addrs[e], sizeof(addr_str));
+                    uint8_t ipv6_addrs_flags = iface->ipv6.addrs_flags[e];
+                    if ((ipv6_addrs_flags & GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_MASK )== GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID)
+                    {
+                        valid = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if(!valid) {
+            printf("no valid ipv6 addr found try again\n");
+            sleep(1);
+        }
+    }
+    printf("init chord\n");
+    init_chord(addr_str);
+    printf("done\n");
+    int i = fill_bslist_ll_mcast(16, 2);
+    printf("found %d bs nodes\n",i);
+    return 0;
+}
+
 int chord_cmd(int argc, char **argv)
 {
     if (argc < 2)
@@ -101,7 +134,6 @@ int chord_cmd(int argc, char **argv)
                 return -1;
             }
         }
-        add_node_wrapper(NULL);
     }
     else if (strcmp(argv[1], "join") == 0) {
 
@@ -133,7 +165,8 @@ int chord_cmd(int argc, char **argv)
                 printf("error init chord\n");
                 return -1;
             }
-            add_node_wrapper(JOIN_ADDR);
+            fill_bslist_ll_mcast(16, 2);
+            //add_node_to_bslist_str(JOIN_ADDR);
         }
         else
         {
@@ -141,13 +174,16 @@ int chord_cmd(int argc, char **argv)
                 printf("error init chord\n");
                 return -1;
             }
-            add_node_wrapper(argv[3]);
+            add_node_to_bslist_str(argv[3]);
         }
     }
-    else {
+    else
+    {
         puts("error: invalid command");
         return 1;
     }
+    start_wrapper();
+
     dev.driver = &chord_mtd_driver;
     dev.page_size = 128;
     dev.pages_per_sector = 1;

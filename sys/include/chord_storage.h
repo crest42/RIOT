@@ -1,6 +1,7 @@
 #ifndef CHORD_STORAGE_H
 #define CHORD_STORAGE_H
 #include "../../chord_test/chord/include/chord.h"
+#include "../../chord_test/chord/include/bootstrap.h"
 #include "../../chord_test/CHash/chash.h"
 #include "../../chord_test/CHash/backends/chash_backend_linked.h"
 #include "../../chord_test/CHash/frontends/chash_frontend_mirror.h"
@@ -20,6 +21,6 @@ extern mtd_desc_t chord_mtd_driver;
 
 int init_chord_wrapper(char *addr);
 
-int add_node_wrapper(char *addr);
+int start_wrapper(void);
 int debug_print(void);
 #endif //CHORD_STORAGE_H

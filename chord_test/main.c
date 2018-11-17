@@ -30,6 +30,7 @@
 static msg_t main_msg_queue[MAIN_MSG_QUEUE_SIZE];
 
 extern int chord_cmd(int argc, char **argv);
+extern int chord_bs_cmd(int argc, char **argv);
 extern int chord_read_cmd(int argc, char **argv);
 extern int chord_write_cmd(int argc, char **argv);
 extern int chord_status_cmd(int argc, char **argv);
@@ -56,6 +57,7 @@ static const shell_command_t shell_commands[] = {
     { "dump", "Dump a single block", chord_dump_block },
     { "bench", "Benchmark write" , chord_write_benchmark },
     { "rand", "Randomness check" , check_randomness },
+    { "bs", "Bootstrap" , chord_bs_cmd },
     { NULL, NULL, NULL }
 };
 
@@ -73,6 +75,7 @@ int main(void)
    // char **a = (char *[]){"chord", "new"};
     //chord_cmd(2, a);
 #endif
+    printf("%d\n", GNRC_PKTBUF_SIZE);
     puts("All up, running the shell now");
     char line_buf[SHELL_DEFAULT_BUFSIZE];
     shell_run(shell_commands, line_buf, SHELL_DEFAULT_BUFSIZE);

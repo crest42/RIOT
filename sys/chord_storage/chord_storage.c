@@ -31,7 +31,13 @@ int sock_wrapper_open(struct socket_wrapper *wrapper, struct node *node, struct 
         local = &wrapper->local;
         local->family = AF_INET6;
         local->port = local_port;
-        memcpy(&local->addr.ipv6, &node->addr, sizeof(ipv6_addr_t));
+        if(wrapper->any) {
+            local->netif = SOCK_ADDR_ANY_NETIF;
+        }
+        else
+        {
+            memcpy(&local->addr.ipv6, &node->addr, sizeof(ipv6_addr_t));
+        }
     } else {
     memset(&wrapper->local,0,sizeof(wrapper->local));
   }
@@ -40,6 +46,10 @@ int sock_wrapper_open(struct socket_wrapper *wrapper, struct node *node, struct 
     remote->family = AF_INET6;
     remote->port = remote_port;
     memcpy(&remote->addr.ipv6,&target->addr,sizeof(ipv6_addr_t));
+    if(ipv6_addr_is_multicast((ipv6_addr_t *)remote->addr.ipv6)) {
+        ipv6_addr_set_all_nodes_multicast((ipv6_addr_t *)&remote->addr.ipv6,
+                                          IPV6_ADDR_MCAST_SCP_LINK_LOCAL);
+    }
   } else {
     memset(&wrapper->remote,0,sizeof(wrapper->remote));
   }
@@ -110,7 +120,7 @@ void *thread_periodic_wrapper(void *data) {
   return thread_periodic(data);
 }
 
-static int chord_start(struct node *mynode, struct node *partner)
+static int chord_start_threads(struct node *mynode)
 {
 
     /* start server (which means registering pktdump for the chosen port) */
@@ -122,7 +132,7 @@ static int chord_start(struct node *mynode, struct node *partner)
     }
     if (thread_create(server_stack_p, sizeof(server_stack_p), THREAD_PRIORITY_MAIN -1 ,
                       THREAD_CREATE_STACKTEST,
-                      thread_periodic_wrapper, partner, "CHORD Periodic") <= KERNEL_PID_UNDEF) {
+                      thread_periodic_wrapper, mynode, "CHORD Periodic") <= KERNEL_PID_UNDEF) {
         puts("error initializing thread");
         return 1;
     }
@@ -142,18 +152,11 @@ int debug_print(void) {
     return 0;
 }
 
-int add_node_wrapper(char *addr) {
-    if(addr != NULL) {
-        printf("add node addr %s\n",addr);
-        create_node(addr, &partner);
-        add_node(&partner);
-    } else {
-        printf("start master node\n");
-        add_node(NULL);
-    }
+int start_wrapper(void) {
     struct node *mynode = get_own_node();
     printf("start chord\n");
-    chord_start(mynode,&partner);
+    chord_start();
+    chord_start_threads(mynode);
     init_chash(&b, &f);
     return 0;
 }
