@@ -369,7 +369,7 @@ int check_randomness(int argc, char **argv) {
         nodeid_t tmp = get_mod_of_hash(n, CHORD_RING_SIZE);
         observed[tmp]++;
     }
-    int min = INT_MAX, min_id, max = 0, max_id;
+    int min = INT_MAX, min_id = -1, max = 0, max_id = -1;
     for (int i = 0; i < CHORD_RING_SIZE; i++)
     {
         if(observed[i] < min) {

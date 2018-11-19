@@ -4,23 +4,23 @@
 #include "hashes.h"
 #include "hashes/sha1.h"
 
-
 extern struct chash_backend backend;
 extern struct chash_frontend frontend;
 extern size_t read_b;
 extern size_t write_b;
-static struct chash_backend b = {.get = chash_linked_list_get,
-                              .put = chash_linked_list_put,
-                              .backend_periodic_hook = chash_linked_list_maint,
-                              .periodic_data = NULL,
-                              .sync_handler = handle_sync,
-                              .sync_fetch_handler = handle_sync_fetch};
-static struct chash_frontend f = {.get = chash_mirror_get,
-                               .put = chash_mirror_put,
-                               .put_handler = handle_put,
-                               .get_handler = handle_get,
-                               .data = NULL,
-                               .frontend_periodic_hook = NULL};
+static struct chash_backend b = {.get                   = chash_linked_list_get,
+                                 .put                   = chash_linked_list_put,
+                                 .backend_periodic_hook = NULL,
+                                 .periodic_data         = NULL};
+
+static struct chash_frontend f = {.get                    = chash_mirror_get,
+                                  .put                    = chash_mirror_put,
+                                  .put_handler            = handle_put,
+                                  .get_handler            = handle_get,
+                                  .frontend_periodic_hook = chash_mirror_periodic,
+                                  .periodic_data          = NULL,
+                                  .sync_handler           = handle_sync,
+                                  .sync_fetch_handler     = handle_sync_fetch};
 int sock_wrapper_open(struct socket_wrapper *wrapper, struct node *node, struct node *target, int local_port, int remote_port)
 {
     assert(wrapper);
@@ -63,8 +63,7 @@ int sock_wrapper_recv(struct socket_wrapper *wrapper,unsigned char *buf, size_t 
   return ret;
 }
 
-int sock_wrapper_send(struct socket_wrapper *wrapper,unsigned char *buf, size_t buf_size, int flags) {
-  (void)flags;
+int sock_wrapper_send(struct socket_wrapper *wrapper,unsigned char *buf, size_t buf_size) {
   int ret = sock_udp_send(&wrapper->sock, buf, buf_size, &wrapper->remote);
   write_b += ret;
   return ret;
@@ -92,11 +91,11 @@ hash(unsigned char* out,
 #define SERVER_MSG_QUEUE_SIZE   (8)
 #define SERVER_BUFFER_SIZE      (64)
 //static char server_buffer_p[SERVER_BUFFER_SIZE];
-static char server_stack_p[THREAD_STACKSIZE_DEFAULT*2];
+static char server_stack_p[THREAD_STACKSIZE_DEFAULT];
 //static msg_t server_msg_queue_p[SERVER_MSG_QUEUE_SIZE];
 
 //static char server_buffer_w[SERVER_BUFFER_SIZE];
-static char server_stack_w[THREAD_STACKSIZE_DEFAULT*2];
+static char server_stack_w[THREAD_STACKSIZE_DEFAULT];
 //static msg_t server_msg_queue_w[SERVER_MSG_QUEUE_SIZE];
 
 enum mtd_power_state power_state = MTD_POWER_UP;
