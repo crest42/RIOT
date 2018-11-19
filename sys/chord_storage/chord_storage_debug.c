@@ -89,8 +89,23 @@ msg_to_string(int msg)
       return "MSG_TYPE_REFRESH_CHILD_OK";
     case MSG_TYPE_REFRESH_CHILD_REDIRECT:
       return "MSG_TYPE_REFRESH_CHILD_REDIRECT";
-    default:
-      return "UNKNOWN";
+    case MSG_TYPE_GET_SUCCESSORLIST_ID:
+      return "MSG_TYPE_GET_SUCCESSORLIST_ID";
+    case MSG_TYPE_GET_SUCCESSORLIST_ID_RESP:
+      return "MSG_TYPE_GET_SUCCESSORLIST_ID_RESP";
+    case MSG_TYPE_GET_SUCCESSORLIST_ID_EFAIL:
+      return "MSG_TYPE_GET_SUCCESSORLIST_ID_EFAIL";
+    case MSG_TYPE_SYNC:
+      return "MSG_TYPE_SYNC";
+    case MSG_TYPE_SYNC_REQ_RESP:
+      return "MSG_TYPE_SYNC_REQ_RESP";
+    case MSG_TYPE_SYNC_REQ_FETCH:
+      return "MSG_TYPE_SYNC_REQ_FETCH";
+    case MSG_TYPE_SYNC_REQ_FETCH_OK:
+      return "MSG_TYPE_SYNC_REQ_FETCH_OK";
+    case MSG_TYPE_PUSH:
+      return "MSG_TYPE_PUSH";
+    default: return "UNKNOWN";
   }
 }
 
