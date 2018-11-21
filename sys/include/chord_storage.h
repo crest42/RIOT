@@ -2,9 +2,9 @@
 #define CHORD_STORAGE_H
 #include "../../chord_test/chord/include/chord.h"
 #include "../../chord_test/chord/include/bootstrap.h"
-#include "../../chord_test/CHash/chash.h"
-#include "../../chord_test/CHash/backends/chash_backend.h"
-#include "../../chord_test/CHash/frontends/chash_frontend_mirror.h"
+#include "../../chord_test/CHash/include/chash.h"
+#include "../../chord_test/CHash/include/chash_backend.h"
+#include "../../chord_test/CHash/include/chash_frontend.h"
 #define DEBUG_MAX_FUNC_NAME 20
 #ifndef DEBUG_LEVEL
 #define DEBUG_LEVEL INFO

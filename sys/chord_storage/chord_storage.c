@@ -16,11 +16,11 @@ static struct chash_backend b = {.get                   = chash_backend_get,
                                  .backend_periodic_hook = NULL,
                                  .periodic_data         = NULL};
 
-static struct chash_frontend f = {.get                    = chash_mirror_get,
-                                  .put                    = chash_mirror_put,
+static struct chash_frontend f = {.get                    = chash_frontend_get,
+                                  .put                    = chash_frontend_put,
                                   .put_handler            = handle_put,
                                   .get_handler            = handle_get,
-                                  .frontend_periodic_hook = chash_mirror_periodic,
+                                  .frontend_periodic_hook = chash_frontend_periodic,
                                   .periodic_data          = NULL,
                                   .sync_handler           = handle_sync,
                                   .sync_fetch_handler     = handle_sync_fetch};
