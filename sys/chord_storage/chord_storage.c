@@ -3,14 +3,13 @@
 #include "thread.h"
 #include "hashes.h"
 #include "hashes/sha1.h"
-#include "mutex.h"
+
 
 extern struct chash_backend backend;
 extern struct chash_frontend frontend;
 extern size_t read_b;
 extern size_t write_b;
 
-mutex_t chord_mutex;
 
 static struct chash_backend b = {.get                   = chash_backend_get,
                                  .put                   = chash_backend_put,
@@ -123,14 +122,6 @@ void *thread_periodic_wrapper(void *data) {
   return thread_periodic(data);
 }
 
-void chord_mutex_lock(void) {
-    mutex_lock(&chord_mutex);
-}
-
-void chord_mutex_unlock(void) {
-    mutex_unlock(&chord_mutex);
-}
-
 static int chord_start_threads(struct node *mynode)
 {
 
@@ -154,7 +145,6 @@ static int chord_start_threads(struct node *mynode)
 
 int init_chord_wrapper(char *addr) {
     printf("init chord with addr %s\n",addr);
-    mutex_init(&chord_mutex);
     return init_chord(addr);
 }
 

@@ -18,8 +18,13 @@ CFLAGS += -DRIOT
 CFLAGS += -DGNRC_UDP_PRIO=4
 CFLAGS += $(BAFLAGS)
 CFLAGS += -DGNRC_IPV6_PRIO=3
+CFLAGS += -DCHASH_BACKEND_LINKED
+CFLAGS += -DMTD_PAGE_SIZE=168
+CFLAGS += -DMTD_SECTOR_SIZE=168
+TMPDIR := $(shell mktemp -u -p .)
+CFLAGS += -DMTD_NATIVE_FILENAME=\"$(TMPDIR)\"
 CFLAGS += -DTHREAD_STACKSIZE_MAIN=524288
-#CFLAGS += -DPOSIX_SETSOCKOPT
+#CFLAGS += -g -DNDEBUG
 
 
 # Include packages that pull up and auto-init the link layer.
@@ -30,8 +35,9 @@ USEMODULE += auto_init_gnrc_netif
 USEMODULE += gnrc_ipv6_default
 USEMODULE += gnrc_udp
 USEMODULE += gnrc_sock_udp
-USEMODULE += posix_sockets
 USEMODULE += posix_time
+USEMODULE += posix_sockets
+USEMODULE += mtd_native
 # Add also the shell, some shell commands
 USEMODULE += chord
 USEMODULE += chash
