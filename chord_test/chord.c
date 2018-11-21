@@ -35,6 +35,7 @@
 #include "chord_storage.h"
 #include <stdarg.h>
 #include "mtd.h"
+#include "mtd.h"
 #include "fs/littlefs_fs.h"
 #include <net/gnrc/netif.h>
 #include "net/gnrc.h"
@@ -137,7 +138,6 @@ int chord_cmd(int argc, char **argv)
     }
     else if (strcmp(argv[1], "join") == 0) {
 
-        printf("join node\n");
         if (argc < 4)
         {
             bool valid = false;
@@ -192,6 +192,7 @@ int chord_cmd(int argc, char **argv)
       printf("Error in mtd init!\n");
       assert(true);
     }
+    chash_backend_init((void *)mtd0);
     printf("chord started\n");
     return 0;
 }
@@ -285,7 +286,7 @@ chord_read_test(int argc, char **argv) {
     }
   }
   printf("sanity check success checked %u bytes == %d!\n",(unsigned int)size,0xac);
-
+  free(data);
   return 0;
 }
 
@@ -299,19 +300,32 @@ chord_write_benchmark(int argc, char **argv) {
   uint32_t size = 128;
   unsigned char *data = malloc(size);
   memset(data,0xac,size);
-  printf("write %lu bytes",(long unsigned int)nr*size);
+  printf("write %lu bytes\n",(long unsigned int)nr*size);
   clock_t start = clock();
-  for(uint32_t i = 0;i < nr;i++) {
-    uint32_t addr = (rand()%10)*size;
-    if(dev.driver->write(&dev,data,addr,size) < 0) {
-      printf("error on write on addr %p\n",(void*)addr);
+  struct aggregate *a = get_stats();
+  size_t available = a->available;
+  if(available == 0) {
       return -1;
-    }
+  }
+  for (uint32_t i = 0; i < nr; i++)
+  {
+      int addr_rand = (rand() % available);
+     // printf("addr: %d size: %d\n", addr_rand, size);
+      uint32_t addr = (addr_rand / size) * size;
+      printf("%d: write %d %d bytes\n", i, addr, size);
+      if (dev.driver->write(&dev, data, addr, size) < 0)
+      {
+          printf("error on write on addr %p\n", (void *)addr);
+          return -1;
+      }
+      thread_yield();
   }
   clock_t end = clock();
-  int t = (int)(end-start);
+  free(data);
+  int t = (int)(end - start);
   assert(t > 0);
-  printf("write benchmark success write %u byte in %d sec %db/clocks %lu clocks per sec\n",(unsigned int)nr*128,t,((int)((nr*size)/t)),(long unsigned int)CLOCKS_PER_SEC);
+  double byte_per_clock = (((double)(nr * size) / t));
+  printf("write benchmark success write %u byte in %d clocks %fB/clocks %fB/s %lu clocks per sec\n", (unsigned int)nr * 128, t, byte_per_clock, byte_per_clock * CLOCKS_PER_SEC, (long unsigned int)CLOCKS_PER_SEC);
   return 0;
 }
 

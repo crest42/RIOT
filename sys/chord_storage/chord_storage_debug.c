@@ -105,8 +105,10 @@ msg_to_string(int msg)
       return "MSG_TYPE_SYNC_REQ_FETCH_OK";
     case MSG_TYPE_PUSH:
       return "MSG_TYPE_PUSH";
+    case MSG_TYPE_GET_EFAIL:
+      return "MSG_TYPE_GET_EFAIL";
     default: return "UNKNOWN";
-  }
+    }
 }
 
 void

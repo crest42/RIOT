@@ -3,13 +3,17 @@
 #include "thread.h"
 #include "hashes.h"
 #include "hashes/sha1.h"
+#include "mutex.h"
 
 extern struct chash_backend backend;
 extern struct chash_frontend frontend;
 extern size_t read_b;
 extern size_t write_b;
-static struct chash_backend b = {.get                   = chash_linked_list_get,
-                                 .put                   = chash_linked_list_put,
+
+mutex_t chord_mutex;
+
+static struct chash_backend b = {.get                   = chash_backend_get,
+                                 .put                   = chash_backend_put,
                                  .backend_periodic_hook = NULL,
                                  .periodic_data         = NULL};
 
@@ -58,9 +62,9 @@ int sock_wrapper_open(struct socket_wrapper *wrapper, struct node *node, struct 
 }
 
 int sock_wrapper_recv(struct socket_wrapper *wrapper,unsigned char *buf, size_t buf_size, int flags) {
-  int ret = sock_udp_recv(&wrapper->sock, buf, buf_size, flags, &wrapper->remote);
-  read_b += ret;
-  return ret;
+    int ret = sock_udp_recv(&wrapper->sock, buf, buf_size, flags, &wrapper->remote);
+    read_b += ret;
+    return ret;
 }
 
 int sock_wrapper_send(struct socket_wrapper *wrapper,unsigned char *buf, size_t buf_size) {
@@ -91,11 +95,11 @@ hash(unsigned char* out,
 #define SERVER_MSG_QUEUE_SIZE   (8)
 #define SERVER_BUFFER_SIZE      (64)
 //static char server_buffer_p[SERVER_BUFFER_SIZE];
-static char server_stack_p[THREAD_STACKSIZE_DEFAULT];
+static char server_stack_p[THREAD_STACKSIZE_DEFAULT*3];
 //static msg_t server_msg_queue_p[SERVER_MSG_QUEUE_SIZE];
 
 //static char server_buffer_w[SERVER_BUFFER_SIZE];
-static char server_stack_w[THREAD_STACKSIZE_DEFAULT];
+static char server_stack_w[THREAD_STACKSIZE_DEFAULT*3];
 //static msg_t server_msg_queue_w[SERVER_MSG_QUEUE_SIZE];
 
 enum mtd_power_state power_state = MTD_POWER_UP;
@@ -117,6 +121,14 @@ void *thread_periodic_wrapper(void *data) {
   static msg_t _msg_q[16];
   msg_init_queue(_msg_q, 16);
   return thread_periodic(data);
+}
+
+void chord_mutex_lock(void) {
+    mutex_lock(&chord_mutex);
+}
+
+void chord_mutex_unlock(void) {
+    mutex_unlock(&chord_mutex);
 }
 
 static int chord_start_threads(struct node *mynode)
@@ -142,6 +154,7 @@ static int chord_start_threads(struct node *mynode)
 
 int init_chord_wrapper(char *addr) {
     printf("init chord with addr %s\n",addr);
+    mutex_init(&chord_mutex);
     return init_chord(addr);
 }
 
@@ -174,7 +187,7 @@ int mtd_init(mtd_dev_t *mtd) {
 
 static uint32_t align_addr_to_block(uint32_t addr,mtd_dev_t *mtd) {
     assert(mtd);
-    return (addr / mtd->page_size);
+    return (addr / (mtd->page_size));
 }
 
 static uint32_t get_offset(uint32_t addr,mtd_dev_t *mtd) {
@@ -190,7 +203,7 @@ int mtd_read(mtd_dev_t *mtd, void *dest, uint32_t addr, uint32_t count) {
     //uint32_t address_start = addr % mtd->page_size;
     //uint32_t address_end = (addr+count) % mtd->page_size;
     uint32_t block_start = align_addr_to_block(addr, mtd);
-    uint32_t block_end = align_addr_to_block(addr + (count-1), mtd);
+    uint32_t block_end = align_addr_to_block(addr + (count - 1), mtd);
     assert(block_end >= block_start);
     uint32_t block_count = (block_end-block_start)+1;
     uint32_t remainder = count;
@@ -219,7 +232,7 @@ int mtd_write(mtd_dev_t *mtd, const void *src, uint32_t addr, uint32_t count) {
     //uint32_t address_start = addr % mtd->page_size;
     //uint32_t address_end = (addr+count) % mtd->page_size;
     uint32_t block_start = align_addr_to_block(addr, mtd);
-    uint32_t block_end   = align_addr_to_block(addr + count, mtd);
+    uint32_t block_end   = align_addr_to_block(addr + (count-1), mtd);
     uint32_t offset      = get_offset(addr,mtd);
     assert(block_end >= block_start);
     uint32_t block_count = (block_end-block_start)+1;

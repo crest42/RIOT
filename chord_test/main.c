@@ -68,11 +68,12 @@ int main(void)
     msg_init_queue(main_msg_queue, MAIN_MSG_QUEUE_SIZE);
     /* start shell */
     puts("Starting chord");
-    #ifdef CHORD_AUTOSTART
+    printf("%s\n", MTD_NATIVE_FILENAME);
+#ifdef CHORD_AUTOSTART
     char **a = (char *[]){"chord", "join"};
     chord_cmd(2, a);
     #else
-   // char **a = (char *[]){"chord", "new"};
+    // char **a = (char *[]){"chord", "new"};
     //chord_cmd(2, a);
 #endif
     printf("%d\n", GNRC_PKTBUF_SIZE);
