@@ -1,8 +1,11 @@
 #include "chord_storage.h"
 #include <stdarg.h>
 #include <stdio.h>
-
-static const char*
+extern struct childs childs;
+extern struct fingertable_entry fingertable[FINGERTABLE_SIZE];
+extern struct node successorlist[SUCCESSORLIST_SIZE];
+extern struct aggregate stats;
+static const char *
 log_level_to_string(enum log_level level)
 {
   switch (level) {
@@ -166,7 +169,6 @@ debug_printf(unsigned long t,
 static void
 debug_print_fingertable(void)
 {
-struct fingertable_entry *fingertable = get_fingertable();  
   struct node *mynode = get_own_node();
   printf("fingertable of %u:\n", (unsigned int)mynode->id);
   for (int i = 0; i < FINGERTABLE_SIZE; i++) {
@@ -187,8 +189,6 @@ struct fingertable_entry *fingertable = get_fingertable();
 static void
 debug_print_successorlist(void)
 {
-    struct node *successorlist = get_successorlist();
-
 struct node *mynode = get_own_node();
   printf("successorlist of %u:\n", (unsigned int)mynode->id);
 
@@ -245,12 +245,12 @@ debug_print_node(struct node* node, bool verbose)
     printf("NULL");
   }
   printf("\nchilds:\n");
-  struct childs *c = get_childs();
-  for(int i = 0;i<CHORD_TREE_CHILDS;i++) {
+  struct childs *c = &childs;
+  for (int i = 0; i < CHORD_TREE_CHILDS; i++)
+  {
     printf("child %d is %u and age %d\n",i,(unsigned int)c->child[i].child,(int)(time(NULL)-c->child[i].t));
   }
-  struct aggregate *stats = get_stats();
-  printf("aggregation information: %d nodes, size: %d/%d\n",stats->nodes,stats->used,stats->available);
+  printf("aggregation information: %d nodes, size: %d/%d\n",stats.nodes,stats.used,stats.available);
   if (verbose)
   {
     debug_print_fingertable();

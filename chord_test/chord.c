@@ -56,7 +56,8 @@ static vfs_mount_t flash_mount = {
     .private_data = &fs_desc,
 };
 
-FILE* default_out;
+extern struct aggregate stats;
+FILE *default_out;
 mtd_dev_t dev;
 
 int chord_bs_cmd(int argc, char **argv) {
@@ -302,7 +303,7 @@ chord_write_benchmark(int argc, char **argv) {
   memset(data,0xac,size);
   printf("write %lu bytes\n",(long unsigned int)nr*size);
   clock_t start = clock();
-  struct aggregate *a = get_stats();
+  struct aggregate *a = &stats;
   size_t available = a->available;
   if(available == 0) {
       return -1;
