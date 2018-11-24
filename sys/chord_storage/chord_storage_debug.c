@@ -137,16 +137,16 @@ debug_printf(unsigned long t,
     max_func_name[i] = ' ';
   }
   nodeid_t suc = 0, pre = 0, share = 0;
-  if(mynode->additional->predecessor) {
-    pre = mynode->additional->predecessor->id;
+  if(get_predecessor()) {
+    pre = get_predecessor()->id;
     if(pre < mynode->id) {
       share = mynode->id - pre;
     } else {
       share = (CHORD_RING_SIZE - pre) + mynode->id;
     }
   }
-  if(mynode->additional->successor) {
-    suc = mynode->additional->successor->id;
+  if(get_successor()) {
+    suc = get_successor()->id;
   }
 
   fprintf(out,
@@ -193,8 +193,8 @@ struct node *mynode = get_own_node();
   printf("successorlist of %u:\n", (unsigned int)mynode->id);
 
   int myid = -1;
-  if (!node_is_null(mynode->additional->successor)) {
-    myid = mynode->additional->successor->id;
+  if (!node_is_null(get_successor())) {
+    myid = get_successor()->id;
   }
   for (int i = 0; i < SUCCESSORLIST_SIZE; i++) {
     if (!node_is_null(&successorlist[i])) {
@@ -233,14 +233,14 @@ debug_print_keys(void)
 void
 debug_print_node(struct node* node, bool verbose)
 {
-  if (!node_is_null(node->additional->predecessor)) {
-    printf("%u", (unsigned int)node->additional->predecessor->id);
+  if (!node_is_null(get_predecessor())) {
+    printf("%u", (unsigned int)get_predecessor()->id);
   } else {
     printf("NULL");
   }
   printf("<-%u->", (unsigned int)node->id);
-  if (node->additional->successor) {
-    printf("%u", (unsigned int)node->additional->successor->id);
+  if (get_successor()) {
+    printf("%u", (unsigned int)get_successor()->id);
   } else {
     printf("NULL");
   }
