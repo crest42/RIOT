@@ -6,7 +6,7 @@ extern struct fingertable_entry fingertable[FINGERTABLE_SIZE];
 extern struct node successorlist[SUCCESSORLIST_SIZE];
 extern struct aggregate stats;
 static const char *
-log_level_to_string(enum log_level level)
+log_level_to_string(chord_log_level_t level)
 {
   switch (level) {
     case OFF:

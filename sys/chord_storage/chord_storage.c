@@ -54,7 +54,7 @@ int sock_wrapper_open(struct socket_wrapper *wrapper, struct node *node, struct 
                                           IPV6_ADDR_MCAST_SCP_LINK_LOCAL);
     }
   } else {
-    memset(&wrapper->remote,0,sizeof(wrapper->remote));
+      memset(&wrapper->remote, 0, sizeof(wrapper->remote));
   }
 
   return sock_udp_create(&wrapper->sock, local, remote, SOCK_FLAGS_REUSE_EP);
