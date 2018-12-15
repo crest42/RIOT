@@ -146,6 +146,38 @@ static const uart_conf_t uart_config[] = {
     }
 };
 
+/**
+ * @name ETH configuration
+ * @{
+ */
+#define ETH_NUMOF           (1)
+#define ETH_RX_BUFFER_COUNT (4)
+#define ETH_TX_BUFFER_COUNT (4)
+ #define ETH_RX_BUFFER_SIZE (1524)
+#define ETH_TX_BUFFER_SIZE (1524)
+ #define ETH_DMA_ISR        isr_dma2_stream0
+ static const eth_conf_t eth_config = {
+    .mode = RMII,
+    .mac = { 0 },
+    .speed = ETH_SPEED_100TX_FD,
+    .dma_chan = 0,
+    .dma_stream = 8,
+    .phy_addr = 0x01,
+    .pins = {
+        GPIO_PIN(PORT_G, 13),
+        GPIO_PIN(PORT_B, 13),
+        GPIO_PIN(PORT_G, 11),
+        GPIO_PIN(PORT_C, 4),
+        GPIO_PIN(PORT_C, 5),
+        GPIO_PIN(PORT_A, 7),
+        GPIO_PIN(PORT_C, 1),
+        GPIO_PIN(PORT_A, 2),
+        GPIO_PIN(PORT_A, 1),
+    }
+};
+ /** @} */
+
+
 #define UART_0_ISR          (isr_usart3)
 #define UART_1_ISR          (isr_usart6)
 #define UART_2_ISR          (isr_usart2)
