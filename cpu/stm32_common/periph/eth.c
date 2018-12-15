@@ -17,12 +17,12 @@
  *
  * @}
  */
-
 #include "cpu.h"
 #include "mutex.h"
 #include "assert.h"
 #include "periph_conf.h"
 #include "periph/gpio.h"
+#include "luid.h"
 
 #include "board.h"
 
@@ -36,12 +36,10 @@
 #define ENABLE_DEBUG (0)
 #include "debug.h"
 
+char send_buf[ETH_TX_BUFFER_SIZE];
 #define SDEBUG(...) DEBUG("eth: " __VA_ARGS__)
-
 #include <string.h>
-
 #if ETH_NUMOF
-
 /* Set the value of the divider with the clock configured */
 #if !defined(CLOCK_CORECLOCK) || CLOCK_CORECLOCK < (20000000U)
 #error This peripheral requires a CORECLOCK of at least 20MHz
@@ -202,6 +200,7 @@ static void _init_dma(void)
 
 int eth_init(void)
 {
+    char hwaddr[ETHERNET_ADDR_LEN];
     /* enable APB2 clock */
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 
@@ -253,7 +252,12 @@ int eth_init(void)
     ETH->DMABMR = ETH_DMABMR_DA | ETH_DMABMR_AAB | ETH_DMABMR_FB |
                   ETH_DMABMR_RDP_32Beat | ETH_DMABMR_PBL_32Beat | ETH_DMABMR_EDE;
 
-    set_mac(eth_config.mac);
+    if(eth_config.mac[0] != 0) {
+      set_mac(eth_config.mac);
+    }  else {
+      luid_get(hwaddr, ETHERNET_ADDR_LEN);
+      set_mac(hwaddr);
+    }
 
     _init_dma();
 
@@ -289,7 +293,6 @@ static int eth_send(const char *data, unsigned len)
     if (count > ETH_TX_BUFFER_COUNT) {
         return -1;
     }
-
     while (count--) {
         while (tx_curr->status & DESC_OWN) {
             /* block until there's an available descriptor */
@@ -329,7 +332,6 @@ static int eth_send(const char *data, unsigned len)
 
     /* start tx */
     ETH->DMATPDR = 0;
-
     return sent;
 }
 
@@ -339,7 +341,6 @@ static int _try_receive(char *data, int max_len, int block)
     int copied = 0;
     int drop = (data || max_len > 0);
     edma_desc_t *p = rx_curr;
-
     mutex_lock(&receive_lock);
     for (int i = 0; i < ETH_RX_BUFFER_COUNT && len == 0; i++) {
         /* try receiving, if the block is set, simply wait for the rest of
@@ -432,21 +433,27 @@ void ETH_DMA_ISR(void)
 {
     /* clear DMA done flag */
     int stream = eth_config.dma_stream;
-    dma_base(stream)->IFCR[dma_hl(stream)] = dma_ifc(stream);
+    int sel = dma_hl(stream);
+    if(sel == 0) {
+      dma_base(stream)->LIFCR = dma_ifc(stream);
+    } else {
+      dma_base(stream)->HIFCR = dma_ifc(stream);
+    }
     mutex_unlock(&_dma_sync);
     cortexm_isr_end();
 }
 
-static int _send(netdev_t *netdev, const struct iovec *vector, unsigned count)
+static int _send(netdev_t *netdev, const struct iolist *iolist)
 {
     (void)netdev;
-
     int ret = 0, len = 0;
     mutex_lock(&send_lock);
-    for (int i = 0; i < count && ret <= 0; i++) {
-        ret = eth_send(vector[i].iov_base, vector[i].iov_len);
-        len += ret;
+    for (const iolist_t *iol = iolist; iol; iol = iol->iol_next) {
+      memcpy(send_buf+len,iol->iol_base, iol->iol_len);
+      len += iol->iol_len;
     }
+    ret = eth_send(send_buf,len);
+
     SDEBUG("_send: %d %d\n", ret, len);
     mutex_unlock(&send_lock);
 
@@ -517,10 +524,11 @@ static int _set(netdev_t *dev, netopt_t opt, const void *value, size_t max_len)
 
 static int _init(netdev_t *netdev)
 {
+    (void)netdev;
     return eth_init();
 }
 
-const static netdev_driver_t netdev_driver_stm32f4eth = {
+static const netdev_driver_t netdev_driver_stm32f4eth = {
     .send = _send,
     .recv = _recv,
     .init = _init,
