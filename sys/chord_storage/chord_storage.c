@@ -94,11 +94,11 @@ hash(unsigned char* out,
 #define SERVER_MSG_QUEUE_SIZE   (8)
 #define SERVER_BUFFER_SIZE      (64)
 //static char server_buffer_p[SERVER_BUFFER_SIZE];
-static char server_stack_p[THREAD_STACKSIZE_DEFAULT*3];
+static char server_stack_p[THREAD_STACKSIZE_DEFAULT];
 //static msg_t server_msg_queue_p[SERVER_MSG_QUEUE_SIZE];
 
 //static char server_buffer_w[SERVER_BUFFER_SIZE];
-static char server_stack_w[THREAD_STACKSIZE_DEFAULT*3];
+static char server_stack_w[THREAD_STACKSIZE_DEFAULT];
 //static msg_t server_msg_queue_w[SERVER_MSG_QUEUE_SIZE];
 
 enum mtd_power_state power_state = MTD_POWER_UP;
@@ -149,8 +149,10 @@ int init_chord_wrapper(char *addr) {
 }
 
 int debug_print(void) {
+    #ifdef DEBUG_ENABLE
     struct node *mynode = get_own_node();
     debug_print_node(mynode,true);
+    #endif
     return 0;
 }
 

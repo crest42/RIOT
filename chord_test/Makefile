@@ -1,7 +1,7 @@
 # name of your application
 APPLICATION = chord_test
 EXTERNAL_MODULE_DIRS += $(CURDIR)/chord/src/
-EXTERNAL_MODULE_DIRS += $(CURDIR)/CHash
+EXTERNAL_MODULE_DIRS += $(CURDIR)/CHash/src/
 EXTERNAL_MODULE_DIRS += $(CURDIR)/CHash/backends
 EXTERNAL_MODULE_DIRS += $(CURDIR)/CHash/frontends
 #EXTERNAL_MODULE_DIRS += $(RIOTBASE)/sys/chord_storage

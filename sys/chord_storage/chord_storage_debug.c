@@ -1,4 +1,5 @@
 #include "chord_storage.h"
+#ifdef DEBUG_ENABLE
 #include <stdarg.h>
 #include <stdio.h>
 extern struct childs childs;
@@ -250,7 +251,7 @@ debug_print_node(struct node* node, bool verbose)
   {
     printf("child %d is %u and age %d\n",i,(unsigned int)c->child[i].child,(int)(time(NULL)-c->child[i].t));
   }
-  printf("aggregation information: %d nodes, size: %d/%d\n",stats.nodes,stats.used,stats.available);
+  printf("aggregation information: %u nodes, size: %u/%u\n",(unsigned int)stats.nodes,(unsigned int)stats.used,(unsigned int)stats.available);
   if (verbose)
   {
     debug_print_fingertable();
@@ -258,3 +259,4 @@ debug_print_node(struct node* node, bool verbose)
     debug_print_keys();
   }
 }
+#endif

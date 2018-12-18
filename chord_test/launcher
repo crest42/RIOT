@@ -34,5 +34,5 @@ trap ctrl_c 1 2 3 6 9 14 15
 echo $PORT
 export PORT
 cd $RIOTAPP
-BAFLAGS=-DCHORD_AUTOSTART make all term
+BAFLAGS=-DCHORD_AUTOSTART make $1  term
 ctrl_c
