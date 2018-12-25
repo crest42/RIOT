@@ -11,5 +11,6 @@ USEMODULE += lwip_ethernet
 USEMODULE += lwip_ipv4
 USEMODULE += lwip_arp
 USEMODULE += netdev_eth
+USEMODULE += stm32_eth
 
 include $(RIOTBASE)/Makefile.include

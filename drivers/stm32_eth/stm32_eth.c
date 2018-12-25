@@ -162,7 +162,7 @@ static const netdev_driver_t netdev_driver_stm32f4eth = {
     .set = _set,
 };
 
-void eth_netdev_setup(netdev_t *netdev)
+void stm32_eth_netdev_setup(netdev_t *netdev)
 {
     _netdev = netdev;
     netdev->driver = &netdev_driver_stm32f4eth;

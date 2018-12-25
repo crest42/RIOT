@@ -28,31 +28,30 @@
 #include "lwip.h"
 #include "lwip/netif.h"
 #include "lwip/netif/netdev.h"
+#include "stm32_eth.h"
 
 #include "xtimer.h"
 
 #define SET_IP(x, ...) IP4_ADDR(x, __VA_ARGS__)
 
-static netdev_t stm32f4eth;
+static netdev_t stm32eth;
 static struct netif netif;
 static ip4_addr_t local_ip, netmask, gw;
 static sock_udp_ep_t local = SOCK_IPV4_EP_ANY;
 static sock_udp_ep_t remote;
 static uint8_t buff[128];
 
-void eth_netdev_setup(netdev_t *netdev);
-
 int main(void)
 {
     puts("Booting");
 
-    eth_netdev_setup(&stm32f4eth);
+    stm32_eth_netdev_setup(&stm32eth);
 
     SET_IP(&local_ip, 172, 16, 19, 5);
     SET_IP(&netmask, 255, 255, 255, 0);
     SET_IP(&gw, 172, 16, 19, 1);
 
-    if (netif_add(&netif, &local_ip, &netmask, &gw, &stm32f4eth,
+    if (netif_add(&netif, &local_ip, &netmask, &gw, &stm32eth,
                   lwip_netdev_init, tcpip_input) == NULL) {
         puts("error netif_add");
         return -1;
