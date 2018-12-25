@@ -17,24 +17,15 @@
  * @}
  */
 
-#include "net/gnrc/netif/ethernet.h"
 #include "net/sock/udp.h"
-#include "stm32_eth.h"
 
-static char _netif_stack[THREAD_STACKSIZE_MAIN];
 static sock_udp_ep_t local = SOCK_IPV6_EP_ANY;
 static sock_udp_ep_t remote;
 static uint8_t buff[128];
-static netdev_t stm32eth;
 
 int main(void)
 {
-    puts("Set up the netdev\n");
-    stm32_eth_netdev_setup(&stm32eth);
-    puts("Start thread for netif");
-    gnrc_netif_ethernet_create(
-              _netif_stack, sizeof(_netif_stack), GNRC_NETIF_PRIO,
-              "dummy_netif", &stm32eth);
+   puts("Start UDP server");
    sock_udp_t sock;
    local.port = 12345;
    if (sock_udp_create(&sock, &local, NULL, 0) < 0) {
