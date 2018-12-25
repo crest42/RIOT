@@ -1,7 +1,3 @@
 ifneq (,$(filter saul_default,$(USEMODULE)))
   USEMODULE += saul_gpio
 endif
-
-ifneq (,$(filter periph_stm32_eth,$(FEATURES_USED)))
-  USEMODULE += luid
-endif
