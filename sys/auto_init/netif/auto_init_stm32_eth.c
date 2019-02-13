@@ -24,5 +24,7 @@ void auto_init_stm32_eth(void)
                              &stm32eth);
 }
 
+#else
+typedef int dont_be_pedantic;
 #endif /* MODULE_STM32_ETH */
 /** @} */
