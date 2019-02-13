@@ -99,7 +99,7 @@ typedef struct {
         ETH_SPEED_100TX_HD = 0x2000,
         ETH_SPEED_100TX_FD = 0x2100,
     } speed;                            /**< Speed selection */
-    uint8_t dma_stream;                 /**< DMA stream used for TX */
+    uint8_t dma;                        /**< Locical CMA Descriptor used for TX */
     uint8_t dma_chan;                   /**< DMA channel used for TX */
     char mac[6];                        /**< Et hernet MAC address */
     char phy_addr;                      /**< PHY address */

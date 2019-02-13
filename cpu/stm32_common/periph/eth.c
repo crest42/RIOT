@@ -78,9 +78,6 @@ static edma_desc_t *tx_curr;
 static char rx_buffer[ETH_RX_BUFFER_COUNT][ETH_RX_BUFFER_SIZE];
 static char tx_buffer[ETH_TX_BUFFER_COUNT][ETH_TX_BUFFER_SIZE];
 
-/* Mutex relying on interrupt */
-static mutex_t _dma_sync = MUTEX_INIT;
-
 /** Read or write a phy register, to write the register ETH_MACMIIAR_MW is to
  * be passed as the higher nibble of the value */
 static unsigned _rw_phy(unsigned addr, unsigned reg, unsigned value)
@@ -138,10 +135,9 @@ void set_mac(const char *mac)
 }
 
 /** Initialization of the DMA descriptors to be used */
-static void _init_dma(void)
+static void _init_buffer(void)
 {
     int i;
-
     for (i = 0; i < ETH_RX_BUFFER_COUNT; i++) {
         rx_desc[i].status = DESC_OWN;
         rx_desc[i].control = RX_DESC_RCH | (ETH_RX_BUFFER_SIZE & 0x0fff);
@@ -162,18 +158,6 @@ static void _init_dma(void)
 
     ETH->DMARDLAR = (uint32_t)rx_curr;
     ETH->DMATDLAR = (uint32_t)tx_curr;
-
-    /* initialize tx DMA */
-    DMA_Stream_TypeDef *stream = dma_stream(eth_config.dma_stream);
-
-    mutex_lock(&_dma_sync);
-    dma_poweron(eth_config.dma_stream);
-    dma_isr_enable(eth_config.dma_stream);
-    stream->CR = ((eth_config.dma_chan << 25) |
-                  DMA_SxCR_MINC | DMA_SxCR_PINC |
-                  DMA_SxCR_MBURST | DMA_SxCR_PBURST |
-                  DMA_SxCR_PL_1 | DMA_SxCR_DIR_1 | DMA_SxCR_TCIE);
-    stream->FCR = DMA_SxFCR_DMDIS | DMA_SxFCR_FTH;
 }
 
 int eth_init(void)
@@ -237,7 +221,7 @@ int eth_init(void)
       set_mac(hwaddr);
     }
 
-    _init_dma();
+    _init_buffer();
 
     NVIC_EnableIRQ(ETH_IRQn);
     ETH->DMAIER |= ETH_DMAIER_NISE | ETH_DMAIER_TIE | ETH_DMAIER_RIE;
@@ -259,7 +243,6 @@ int eth_init(void)
 
 int eth_send(const char *data, unsigned len)
 {
-    DMA_Stream_TypeDef *stream = dma_stream(eth_config.dma_stream);
     unsigned copy, count, sent = -1;
     edma_desc_t *first = tx_curr;
     edma_desc_t *last = tx_curr;
@@ -282,12 +265,15 @@ int eth_send(const char *data, unsigned len)
 
         /* copy buffer */
         copy = ((len < ETH_TX_BUFFER_SIZE) ? len : ETH_TX_BUFFER_SIZE);
-        stream->PAR = (uint32_t)data;
-        stream->M0AR = (uint32_t)tx_curr->buffer_addr;
-        stream->NDTR = (uint16_t)copy;
-        stream->CR |= DMA_SxCR_EN;
-        mutex_lock(&_dma_sync);
 
+        dma_acquire(eth_config.dma);
+        int ret = dma_transfer(eth_config.dma, eth_config.dma_chan, data,
+                                tx_curr->buffer_addr, copy, DMA_MEM_TO_MEM, DMA_INC_BOTH_ADDR);
+        dma_release(eth_config.dma);
+        if (ret < 0) {
+            DEBUG("stm32_eth: Failure in dma_transfer\n");
+            return ret;
+        }
         tx_curr->control = (copy & 0x1fff);
         len -= copy;
         sent += copy;
@@ -374,20 +360,6 @@ int get_rx_status_owned(void)
 
 void isr_eth_wkup(void)
 {
-    cortexm_isr_end();
-}
-
-void ETH_DMA_ISR(void)
-{
-    /* clear DMA done flag */
-    int stream = eth_config.dma_stream;
-    int sel = dma_hl(stream);
-    if(sel == 0) {
-      dma_base(stream)->LIFCR = dma_ifc(stream);
-    } else {
-      dma_base(stream)->HIFCR = dma_ifc(stream);
-    }
-    mutex_unlock(&_dma_sync);
     cortexm_isr_end();
 }
 
