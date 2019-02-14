@@ -248,20 +248,19 @@ int eth_init(void)
 
 int eth_send(const struct iolist *iolist)
 {
-    unsigned sent = -1, len = iolist_size(iolist);
-    edma_desc_t *first = tx_curr;
-    edma_desc_t *last = tx_curr;
+    unsigned sent = -1, len = 0;
+   
 
     /* safety check */
     if (len > ETH_TX_BUFFER_SIZE) {
+        DEBUG("stm32_eth: Error iolist_size > ETH_TX_BUFFER_SIZE\n");
         return -1;
     }
-
-    for (; iolist; iolist = iolist->iol_next) {
-      memcpy(send_buf+len,iolist->iol_base, iolist->iol_len);
-      len += iolist->iol_len;
+    for (; iolist; iolist = iolist->iol_next)
+    {
+        memcpy(send_buf + len, iolist->iol_base, iolist->iol_len);
+        len += iolist->iol_len;
     }
-    char *buf = send_buf;
 
     /* block until there's an available descriptor */
     while (tx_curr->status & DESC_OWN) {
@@ -272,7 +271,7 @@ int eth_send(const struct iolist *iolist)
     tx_curr->status &= 0x0fffffff;
 
     dma_acquire(eth_config.dma);
-    int ret = dma_transfer(eth_config.dma, eth_config.dma_chan, buf,
+    int ret = dma_transfer(eth_config.dma, eth_config.dma_chan, send_buf,
                             tx_curr->buffer_addr, len, DMA_MEM_TO_MEM, DMA_INC_BOTH_ADDR);
     dma_release(eth_config.dma);
     if (ret < 0) {
@@ -281,18 +280,13 @@ int eth_send(const struct iolist *iolist)
     }
     tx_curr->control = (len & 0x1fff);
 
-    /* update pointers */
-    tx_curr = tx_curr->desc_next;
-
     /* set flags for first and last frames */
-    first->status |= TX_DESC_FS;
-    last->status |= TX_DESC_LS | TX_DESC_IC;
+    tx_curr->status |= TX_DESC_FS;
+    tx_curr->status |= TX_DESC_LS | TX_DESC_IC;
 
     /* give the descriptors to the DMA */
-    while (first != tx_curr) {
-        first->status |= DESC_OWN;
-        first = first->desc_next;
-    }
+    tx_curr->status |= DESC_OWN;
+    tx_curr = tx_curr->desc_next;
 
     /* start tx */
     ETH->DMATPDR = 0;

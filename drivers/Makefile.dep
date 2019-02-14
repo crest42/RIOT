@@ -476,6 +476,7 @@ ifneq (,$(filter stm32_eth,$(USEMODULE)))
   USEMODULE += netdev_eth
   USEMODULE += iolist
   USEMODULE += luid
+  USEMODULE += periph_eth
 endif
 
 ifneq (,$(filter sx127%,$(USEMODULE)))
