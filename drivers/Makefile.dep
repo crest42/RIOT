@@ -474,6 +474,7 @@ endif
 
 ifneq (,$(filter stm32_eth,$(USEMODULE)))
   USEMODULE += netdev_eth
+  USEMODULE += iolist
   USEMODULE += luid
 endif
 
