@@ -239,7 +239,7 @@ int eth_init(void)
     ETH->DMAOMR |= ETH_DMAOMR_ST;
     ETH->DMAOMR |= ETH_DMAOMR_SR;
 
-    /* configure speed, do it at the end so the PHY had time to 
+    /* configure speed, do it at the end so the PHY had time to
      * reset */
     eth_phy_write(eth_config.phy_addr, PHY_BMCR, eth_config.speed);
 
