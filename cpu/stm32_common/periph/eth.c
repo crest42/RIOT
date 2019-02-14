@@ -75,7 +75,6 @@ static edma_desc_t *rx_curr;
 static edma_desc_t *tx_curr;
 
 /* Buffers */
-char send_buf[ETH_TX_BUFFER_SIZE];
 static char rx_buffer[ETH_RX_BUFFER_COUNT][ETH_RX_BUFFER_SIZE];
 static char tx_buffer[ETH_TX_BUFFER_COUNT][ETH_TX_BUFFER_SIZE];
 
@@ -248,18 +247,13 @@ int eth_init(void)
 
 int eth_send(const struct iolist *iolist)
 {
-    unsigned sent = -1, len = 0;
-   
+    unsigned sent = -1, len = iolist_size(iolist);
+    int ret = 0;
 
     /* safety check */
     if (len > ETH_TX_BUFFER_SIZE) {
         DEBUG("stm32_eth: Error iolist_size > ETH_TX_BUFFER_SIZE\n");
         return -1;
-    }
-    for (; iolist; iolist = iolist->iol_next)
-    {
-        memcpy(send_buf + len, iolist->iol_base, iolist->iol_len);
-        len += iolist->iol_len;
     }
 
     /* block until there's an available descriptor */
@@ -271,8 +265,12 @@ int eth_send(const struct iolist *iolist)
     tx_curr->status &= 0x0fffffff;
 
     dma_acquire(eth_config.dma);
-    int ret = dma_transfer(eth_config.dma, eth_config.dma_chan, send_buf,
-                            tx_curr->buffer_addr, len, DMA_MEM_TO_MEM, DMA_INC_BOTH_ADDR);
+     for (; iolist; iolist = iolist->iol_next)
+    {
+        ret += dma_transfer(eth_config.dma, eth_config.dma_chan, iolist->iol_base,
+                            tx_curr->buffer_addr+ret, iolist->iol_len, DMA_MEM_TO_MEM, DMA_INC_BOTH_ADDR);
+    }
+
     dma_release(eth_config.dma);
     if (ret < 0) {
         DEBUG("stm32_eth: Failure in dma_transfer\n");
