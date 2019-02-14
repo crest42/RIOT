@@ -17,8 +17,8 @@
  * @author      Víctor Ariño <victor.arino@triagnosys.com>
  */
 
-#ifndef ETH_PHY_H
-#define ETH_PHY_H
+#ifndef NET_PHY_H
+#define NET_PHY_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -131,4 +131,4 @@ int32_t eth_phy_write(uint16_t addr, uint8_t reg, uint16_t value);
 }
 #endif
 /** @} */
-#endif /* ETH_PHY_H */
+#endif /* NET_PHY_H */
