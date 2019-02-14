@@ -15,8 +15,4 @@ ifneq (,$(filter periph_flashpage periph_eeprom,$(USEMODULE)))
   SRC += flash_common.c
 endif
 
-ifneq (,$(filter periph_stm32_eth,$(FEATURES_PROVIDED)))
-  SRC += eth.c
-endif
-
 include $(RIOTMAKE)/periph.mk

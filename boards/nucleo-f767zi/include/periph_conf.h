@@ -160,8 +160,8 @@ static const uart_conf_t uart_config[] = {
  * @{
  */
 #define ETH_NUMOF           (1)
-#define ETH_RX_BUFFER_COUNT (4)
-#define ETH_TX_BUFFER_COUNT (4)
+#define ETH_RX_BUFFER_COUNT (1)
+#define ETH_TX_BUFFER_COUNT (1)
 
 #define ETH_RX_BUFFER_SIZE (1524)
 #define ETH_TX_BUFFER_SIZE (1524)

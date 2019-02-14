@@ -22,20 +22,20 @@
 #include "mutex.h"
 #include "net/netdev/eth.h"
 #include "net/ethernet.h"
+#include "iolist.h"
 #define ENABLE_DEBUG (0)
 #include "debug.h"
 
 #include <string.h>
 static mutex_t _tx = MUTEX_INIT;
 static mutex_t _rx = MUTEX_INIT;
-char send_buf[ETH_TX_BUFFER_SIZE];
 netdev_t *_netdev;
 
 void set_mac(const char *mac);
 void get_mac(char *out);
 int eth_init(void);
 int eth_receive_blocking(char *data, unsigned max_len);
-int eth_send(const char *data, unsigned len);
+int eth_send(const struct iolist *iolist);
 int get_rx_status_owned(void);
 
 static void _isr(netdev_t *netdev) {
@@ -89,26 +89,22 @@ static int _recv(netdev_t *netdev, void *buf, size_t len, void *info)
 static int _send(netdev_t *netdev, const struct iolist *iolist)
 {
     (void)netdev;
-    int ret = 0, len = 0;
+    int ret = 0;
     if(get_rx_status_owned()) {
         mutex_lock(&_tx);
     }
-    for (const iolist_t *iol = iolist; iol; iol = iol->iol_next) {
-      memcpy(send_buf+len,iol->iol_base, iol->iol_len);
-      len += iol->iol_len;
-    }
-    ret = eth_send(send_buf,len);
-    DEBUG("stm32_eth_netdev: _send: %d %d\n", ret, len);
-
-#ifdef MODULE_NETSTATS_L2
-    netdev->stats.tx_bytes += len;
-#endif
+    ret = eth_send(iolist);
+    DEBUG("stm32_eth_netdev: _send: %d %d\n", ret, iolist_size(iolist));
 
     if (ret < 0) {
         return ret;
     }
 
-    return len;
+#ifdef MODULE_NETSTATS_L2
+    netdev->stats.tx_bytes += ret;
+#endif
+
+    return ret;
 }
 
 static int _set(netdev_t *dev, netopt_t opt, const void *value, size_t max_len)

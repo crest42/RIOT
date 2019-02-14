@@ -22,7 +22,7 @@
 #include "luid.h"
 #include "net/ethernet.h"
 #include "net/phy.h"
-
+#include "iolist.h"
 #define ENABLE_DEBUG (0)
 #include "debug.h"
 
@@ -75,6 +75,7 @@ static edma_desc_t *rx_curr;
 static edma_desc_t *tx_curr;
 
 /* Buffers */
+char send_buf[ETH_TX_BUFFER_SIZE];
 static char rx_buffer[ETH_RX_BUFFER_COUNT][ETH_RX_BUFFER_SIZE];
 static char tx_buffer[ETH_TX_BUFFER_COUNT][ETH_TX_BUFFER_SIZE];
 
@@ -142,14 +143,18 @@ static void _init_buffer(void)
         rx_desc[i].status = DESC_OWN;
         rx_desc[i].control = RX_DESC_RCH | (ETH_RX_BUFFER_SIZE & 0x0fff);
         rx_desc[i].buffer_addr = &rx_buffer[i][0];
-        rx_desc[i].desc_next = &rx_desc[i + 1];
+        if((i+1) < ETH_RX_BUFFER_COUNT) {
+            rx_desc[i].desc_next = &rx_desc[i + 1];
+        }
     }
     rx_desc[i - 1].desc_next = &rx_desc[0];
 
     for (i = 0; i < ETH_TX_BUFFER_COUNT; i++) {
         tx_desc[i].status = TX_DESC_TCH | TX_DESC_CIC;
         tx_desc[i].buffer_addr = &tx_buffer[i][0];
-        tx_desc[i].desc_next = &tx_desc[i + 1];
+        if((i+1) < ETH_RX_BUFFER_COUNT) {
+            tx_desc[i].desc_next = &tx_desc[i + 1];
+        }
     }
     tx_desc[i - 1].desc_next = &tx_desc[0];
 
@@ -241,47 +246,43 @@ int eth_init(void)
     return 0;
 }
 
-int eth_send(const char *data, unsigned len)
+int eth_send(const struct iolist *iolist)
 {
-    unsigned copy, count, sent = -1;
+    unsigned sent = -1, len = iolist_size(iolist);
     edma_desc_t *first = tx_curr;
     edma_desc_t *last = tx_curr;
 
-    count = len / ETH_TX_BUFFER_SIZE;
-    count += (len - (count * ETH_TX_BUFFER_SIZE) > 0) ? 1 : 0;
-
     /* safety check */
-    if (count > ETH_TX_BUFFER_COUNT) {
+    if (len > ETH_TX_BUFFER_SIZE) {
         return -1;
     }
-    while (count--) {
-        /* block until there's an available descriptor */
-        while (tx_curr->status & DESC_OWN) {
-            DEBUG("stm32_eth: not avail\n");
-        }
 
-        /* clear status field */
-        tx_curr->status &= 0x0fffffff;
-
-        /* copy buffer */
-        copy = ((len < ETH_TX_BUFFER_SIZE) ? len : ETH_TX_BUFFER_SIZE);
-
-        dma_acquire(eth_config.dma);
-        int ret = dma_transfer(eth_config.dma, eth_config.dma_chan, data,
-                                tx_curr->buffer_addr, copy, DMA_MEM_TO_MEM, DMA_INC_BOTH_ADDR);
-        dma_release(eth_config.dma);
-        if (ret < 0) {
-            DEBUG("stm32_eth: Failure in dma_transfer\n");
-            return ret;
-        }
-        tx_curr->control = (copy & 0x1fff);
-        len -= copy;
-        sent += copy;
-
-        /* update pointers */
-        last = tx_curr;
-        tx_curr = tx_curr->desc_next;
+    for (; iolist; iolist = iolist->iol_next) {
+      memcpy(send_buf+len,iolist->iol_base, iolist->iol_len);
+      len += iolist->iol_len;
     }
+    char *buf = send_buf;
+
+    /* block until there's an available descriptor */
+    while (tx_curr->status & DESC_OWN) {
+        DEBUG("stm32_eth: not avail\n");
+    }
+
+    /* clear status field */
+    tx_curr->status &= 0x0fffffff;
+
+    dma_acquire(eth_config.dma);
+    int ret = dma_transfer(eth_config.dma, eth_config.dma_chan, buf,
+                            tx_curr->buffer_addr, len, DMA_MEM_TO_MEM, DMA_INC_BOTH_ADDR);
+    dma_release(eth_config.dma);
+    if (ret < 0) {
+        DEBUG("stm32_eth: Failure in dma_transfer\n");
+        return ret;
+    }
+    tx_curr->control = (len & 0x1fff);
+
+    /* update pointers */
+    tx_curr = tx_curr->desc_next;
 
     /* set flags for first and last frames */
     first->status |= TX_DESC_FS;
