@@ -21,7 +21,6 @@
 #include "periph/gpio.h"
 #include "luid.h"
 #include "net/ethernet.h"
-#include "net/phy.h"
 #include "iolist.h"
 #define ENABLE_DEBUG (0)
 #include "debug.h"
