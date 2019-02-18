@@ -7,7 +7,7 @@
  */
 
 /**
- * @ingroup     stm32_eth_netdev
+ * @ingroup     drivers_stm32_common
  * @{
  *
  * @file
