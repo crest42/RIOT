@@ -31,15 +31,15 @@ static mutex_t _tx = MUTEX_INIT;
 static mutex_t _rx = MUTEX_INIT;
 netdev_t *_netdev;
 
-void set_mac(const char *mac);
-void get_mac(char *out);
-int eth_init(void);
-int eth_receive_blocking(char *data, unsigned max_len);
-int eth_send(const struct iolist *iolist);
-int get_rx_status_owned(void);
+void stm32_eth_set_mac(const char *mac);
+void stm32_eth_get_mac(char *out);
+int stm32_eth_init(void);
+int stm32_eth_receive_blocking(char *data, unsigned max_len);
+int stm32_eth_send(const struct iolist *iolist);
+int stm32_eth_get_rx_status_owned(void);
 
 static void _isr(netdev_t *netdev) {
-    if(get_rx_status_owned()) {
+    if(stm32_eth_get_rx_status_owned()) {
         netdev->event_callback(netdev, NETDEV_EVENT_RX_COMPLETE);
     }
 }
@@ -70,10 +70,10 @@ static int _recv(netdev_t *netdev, void *buf, size_t len, void *info)
 {
     (void)info;
     (void)netdev;
-    if(!get_rx_status_owned()){
+    if(!stm32_eth_get_rx_status_owned()){
                 mutex_lock(&_rx);
     }
-    int ret = eth_receive_blocking((char *)buf, len);
+    int ret = stm32_eth_receive_blocking((char *)buf, len);
     DEBUG("stm32_eth_netdev: _recev: %d\n", ret);
 
     return ret;
@@ -83,11 +83,11 @@ static int _send(netdev_t *netdev, const struct iolist *iolist)
 {
     (void)netdev;
     int ret = 0;
-    if(get_rx_status_owned()) {
+    if(stm32_eth_get_rx_status_owned()) {
         mutex_lock(&_tx);
     }
     netdev->event_callback(netdev, NETDEV_EVENT_TX_STARTED);
-    ret = eth_send(iolist);
+    ret = stm32_eth_send(iolist);
     DEBUG("stm32_eth_netdev: _send: %d %d\n", ret, iolist_size(iolist));
     if (ret < 0)
     {
@@ -106,7 +106,7 @@ static int _set(netdev_t *dev, netopt_t opt, const void *value, size_t max_len)
     switch (opt) {
         case NETOPT_ADDRESS:
             assert(max_len >= ETHERNET_ADDR_LEN);
-            set_mac((char *)value);
+            stm32_eth_set_mac((char *)value);
             res = ETHERNET_ADDR_LEN;
             break;
         default:
@@ -124,7 +124,7 @@ static int _get(netdev_t *dev, netopt_t opt, void *value, size_t max_len)
     switch (opt) {
         case NETOPT_ADDRESS:
             assert(max_len >= ETHERNET_ADDR_LEN);
-            get_mac((char *)value);
+            stm32_eth_get_mac((char *)value);
             res = ETHERNET_ADDR_LEN;
             break;
         default:
@@ -138,7 +138,7 @@ static int _get(netdev_t *dev, netopt_t opt, void *value, size_t max_len)
 static int _init(netdev_t *netdev)
 {
     (void)netdev;
-    return eth_init();
+    return stm32_eth_init();
 }
 
 static const netdev_driver_t netdev_driver_stm32f4eth = {

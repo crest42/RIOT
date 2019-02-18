@@ -110,7 +110,7 @@ int32_t eth_phy_write(uint16_t addr, uint8_t reg, uint16_t value)
     return 0;
 }
 
-void get_mac(char *out)
+void stm32_eth_get_mac(char *out)
 {
     unsigned t;
 
@@ -127,7 +127,7 @@ void get_mac(char *out)
 
 /** Set the mac address. The peripheral supports up to 4 MACs but only one is
  * implemented */
-void set_mac(const char *mac)
+void stm32_eth_set_mac(const char *mac)
 {
     ETH->MACA0HR &= 0xffff0000;
     ETH->MACA0HR |= ((mac[0] << 8) | mac[1]);
@@ -164,7 +164,7 @@ static void _init_buffer(void)
     ETH->DMATDLAR = (uint32_t)tx_curr;
 }
 
-int eth_init(void)
+int stm32_eth_init(void)
 {
     char hwaddr[ETHERNET_ADDR_LEN];
     /* enable APB2 clock */
@@ -219,10 +219,10 @@ int eth_init(void)
                   ETH_DMABMR_RDP_32Beat | ETH_DMABMR_PBL_32Beat | ETH_DMABMR_EDE;
 
     if(eth_config.mac[0] != 0) {
-      set_mac(eth_config.mac);
+      stm32_eth_set_mac(eth_config.mac);
     }  else {
       luid_get(hwaddr, ETHERNET_ADDR_LEN);
-      set_mac(hwaddr);
+      stm32_eth_set_mac(hwaddr);
     }
 
     _init_buffer();
@@ -245,7 +245,7 @@ int eth_init(void)
     return 0;
 }
 
-int eth_send(const struct iolist *iolist)
+int stm32_eth_send(const struct iolist *iolist)
 {
     unsigned len = iolist_size(iolist);
     int ret = 0;
@@ -336,22 +336,22 @@ static int _try_receive(char *data, int max_len, int block)
     return len;
 }
 
-int eth_try_receive(char *data, unsigned max_len)
+int stm32_eth_try_receive(char *data, unsigned max_len)
 {
     return _try_receive(data, max_len, 0);
 }
 
-int eth_receive_blocking(char *data, unsigned max_len)
+int stm32_eth_receive_blocking(char *data, unsigned max_len)
 {
     return _try_receive(data, max_len, 1);
 }
 
-int get_rx_status_owned(void)
+int stm32_eth_get_rx_status_owned(void)
 {
     return (!(rx_curr->status & DESC_OWN));
 }
 
-void isr_eth_wkup(void)
+void stm32_eth_isr_eth_wkup(void)
 {
     cortexm_isr_end();
 }
