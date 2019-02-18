@@ -74,13 +74,6 @@ static int _recv(netdev_t *netdev, void *buf, size_t len, void *info)
                 mutex_lock(&_rx);
     }
     int ret = eth_receive_blocking((char *)buf, len);
-#ifdef MODULE_NETSTATS_L2
-    if (buf) {
-        netdev->stats.rx_count++;
-        netdev->stats.rx_bytes += len;
-    }
-#endif
-
     DEBUG("stm32_eth_netdev: _recev: %d\n", ret);
 
     return ret;
@@ -93,16 +86,15 @@ static int _send(netdev_t *netdev, const struct iolist *iolist)
     if(get_rx_status_owned()) {
         mutex_lock(&_tx);
     }
+    netdev->event_callback(netdev, NETDEV_EVENT_TX_STARTED);
     ret = eth_send(iolist);
     DEBUG("stm32_eth_netdev: _send: %d %d\n", ret, iolist_size(iolist));
-
-    if (ret < 0) {
+    if (ret < 0)
+    {
+        netdev->event_callback(netdev, NETDEV_EVENT_TX_MEDIUM_BUSY);
         return ret;
     }
-
-#ifdef MODULE_NETSTATS_L2
-    netdev->stats.tx_bytes += ret;
-#endif
+    netdev->event_callback(netdev, NETDEV_EVENT_TX_COMPLETE);
 
     return ret;
 }

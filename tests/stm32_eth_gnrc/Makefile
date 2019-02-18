@@ -7,4 +7,6 @@ USEMODULE += gnrc_netdev_default
 USEMODULE += auto_init_gnrc_netif
 USEMODULE += gnrc_udp
 USEMODULE += gnrc_sock_udp
+USEMODULE += netstats
+USEMODULE += netstats_l2
 include $(RIOTBASE)/Makefile.include

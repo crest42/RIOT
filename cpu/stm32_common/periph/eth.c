@@ -247,7 +247,7 @@ int eth_init(void)
 
 int eth_send(const struct iolist *iolist)
 {
-    unsigned sent = -1, len = iolist_size(iolist);
+    unsigned len = iolist_size(iolist);
     int ret = 0;
 
     /* safety check */
@@ -265,7 +265,7 @@ int eth_send(const struct iolist *iolist)
     tx_curr->status &= 0x0fffffff;
 
     dma_acquire(eth_config.dma);
-     for (; iolist; iolist = iolist->iol_next)
+    for (; iolist; iolist = iolist->iol_next)
     {
         ret += dma_transfer(eth_config.dma, eth_config.dma_chan, iolist->iol_base,
                             tx_curr->buffer_addr+ret, iolist->iol_len, DMA_MEM_TO_MEM, DMA_INC_BOTH_ADDR);
@@ -288,7 +288,7 @@ int eth_send(const struct iolist *iolist)
 
     /* start tx */
     ETH->DMATPDR = 0;
-    return sent;
+    return ret;
 }
 
 static int _try_receive(char *data, int max_len, int block)
